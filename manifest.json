@@ -11,6 +11,22 @@
   "categories": ["games", "entertainment"],
   "scope": "/",
   "prefer_related_applications": false,
+  "lang": "en-US",
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Start New Game",
+      "short_name": "New Game",
+      "description": "Start a new game of Garden Defender",
+      "url": "/?action=new-game",
+      "icons": [
+        {
+          "src": "/icon.svg",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
   "icons": [
     {
       "src": "/icon.svg",
