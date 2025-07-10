@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Garden Defender</title>
+</head>
+<body>
+  <div id="game-container">
+    <h1 id="game-title">🌱 Garden Defender 🦝</h1>
+    <div id="start-screen">
+      <div id="start-content">
+        <h2>Defend Your Garden!</h2>
+        <p>🐿️ Squirrels will steal your vegetables one at a time</p>
+        <p>🦝 Raccoons can carry TWO vegetables at once!</p>
+        <p>💧 Use your water spray to stop them</p>
+        <p>🚰 Turn on the water tap if enemies turn it off</p>
+        <button id="start-game-btn">🎮 Start New Game</button>
+      </div>
+    </div>
+    <div id="game"></div>
+    <div id="ui">
+      <div id="score">Score: 0</div>
+      <div id="round">Round: 1</div>
+      <div id="timer">Time: 60</div>
+      <div id="vegetables-left">Vegetables: 0</div>
+      <div id="pause-status"></div>
+      <button id="music-toggle">🎵 Music: ON</button>
+      <button id="quit-game-btn">🚪 Quit Game</button>
+    </div>
+    <div id="instructions">
+      <p>🎮 Use arrow keys to move, SPACE + L/R arrow to spray water/turn on tap, P to pause, ESC to quit</p>
+    </div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
+
