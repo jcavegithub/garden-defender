@@ -2,10 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Garden Defender" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#2d4a2b" />
+  <link rel="manifest" href="/garden-defender/manifest.json" />
+  <link rel="apple-touch-icon" href="/garden-defender/icon.svg" />
+  <link rel="icon" type="image/svg+xml" href="/garden-defender/icon.svg" />
   <title>Garden Defender</title>
-  <script type="module" crossorigin src="/garden-defender/assets/index-zjI4IQni.js"></script>
-  <link rel="stylesheet" crossorigin href="/garden-defender/assets/index-CxsTixML.css">
+  <style>
+    /* Prevent zoom on iOS */
+    body {
+      touch-action: manipulation;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    /* Prevent highlighting on touch */
+    * {
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+  <script type="module" crossorigin src="/garden-defender/assets/index-D1UO-CO2.js"></script>
+  <link rel="stylesheet" crossorigin href="/garden-defender/assets/index-D51w_9SJ.css">
 </head>
 <body>
   <div id="game-container">
@@ -21,6 +42,24 @@
       </div>
     </div>
     <div id="game"></div>
+    
+    <!-- Mobile Touch Controls -->
+    <div id="mobile-controls">
+      <div id="dpad">
+        <button id="up-btn" class="dpad-btn">▲</button>
+        <div class="dpad-row">
+          <button id="left-btn" class="dpad-btn">◀</button>
+          <div class="dpad-center"></div>
+          <button id="right-btn" class="dpad-btn">▶</button>
+        </div>
+        <button id="down-btn" class="dpad-btn">▼</button>
+      </div>
+      <div id="action-buttons">
+        <button id="spray-btn" class="action-btn">💧 SPRAY</button>
+        <button id="pause-btn" class="action-btn">⏸️</button>
+      </div>
+    </div>
+    
     <div id="ui">
       <div id="score">Score: 0</div>
       <div id="round">Round: 1</div>
@@ -31,7 +70,8 @@
       <button id="quit-game-btn">🚪 Quit Game</button>
     </div>
     <div id="instructions">
-      <p>🎮 Use arrow keys to move, SPACE + L/R arrow to spray water/turn on tap, P to pause, ESC to quit</p>
+      <p class="desktop-only">🎮 Use arrow keys to move, SPACE + L/R arrow to spray water/turn on tap, P to pause, ESC to quit</p>
+      <p class="mobile-only">🎮 Use on-screen controls to move and spray water. Tap pause to pause game.</p>
     </div>
   </div>
 </body>

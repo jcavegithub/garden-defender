@@ -1,0 +1,18 @@
+{
+  "name": "Garden Defender",
+  "short_name": "Garden Defender",
+  "description": "Defend your vegetable garden from hungry squirrels and raccoons!",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2d4a2b",
+  "theme_color": "#2d4a2b",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

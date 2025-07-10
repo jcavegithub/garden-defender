@@ -1,0 +1,57 @@
+<!-- Garden Defender App Icon -->
+<svg width="192" height="192" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="192" height="192" fill="#2d4a2b" rx="24"/>
+  
+  <!-- Garden soil -->
+  <rect x="16" y="120" width="160" height="56" fill="#8B4513" rx="8"/>
+  
+  <!-- Vegetables (carrots) -->
+  <ellipse cx="50" cy="140" rx="8" ry="20" fill="#FF8C00"/>
+  <ellipse cx="70" cy="140" rx="8" ry="20" fill="#FF8C00"/>
+  <ellipse cx="90" cy="140" rx="8" ry="20" fill="#FF8C00"/>
+  
+  <!-- Vegetable tops (green leaves) -->
+  <rect x="45" y="120" width="3" height="15" fill="#228B22" rx="1"/>
+  <rect x="48" y="118" width="3" height="17" fill="#228B22" rx="1"/>
+  <rect x="51" y="120" width="3" height="15" fill="#228B22" rx="1"/>
+  
+  <rect x="65" y="120" width="3" height="15" fill="#228B22" rx="1"/>
+  <rect x="68" y="118" width="3" height="17" fill="#228B22" rx="1"/>
+  <rect x="71" y="120" width="3" height="15" fill="#228B22" rx="1"/>
+  
+  <rect x="85" y="120" width="3" height="15" fill="#228B22" rx="1"/>
+  <rect x="88" y="118" width="3" height="17" fill="#228B22" rx="1"/>
+  <rect x="91" y="120" width="3" height="15" fill="#228B22" rx="1"/>
+  
+  <!-- Gardener -->
+  <!-- Head -->
+  <circle cx="130" cy="50" r="16" fill="#FFDBA4"/>
+  <!-- Hat -->
+  <ellipse cx="130" cy="40" rx="18" ry="12" fill="#228B22"/>
+  <!-- Body -->
+  <rect x="118" y="58" width="24" height="32" fill="#8B4513" rx="4"/>
+  <!-- Arms -->
+  <rect x="108" y="62" width="12" height="20" fill="#FFDBA4" rx="6"/>
+  <rect x="132" y="62" width="12" height="20" fill="#FFDBA4" rx="6"/>
+  <!-- Legs -->
+  <rect x="122" y="85" width="8" height="25" fill="#4169E1" rx="4"/>
+  <rect x="132" y="85" width="8" height="25" fill="#4169E1" rx="4"/>
+  
+  <!-- Water spray -->
+  <circle cx="145" cy="75" r="3" fill="#87CEEB" opacity="0.8"/>
+  <circle cx="150" cy="70" r="2" fill="#87CEEB" opacity="0.6"/>
+  <circle cx="155" cy="75" r="2" fill="#87CEEB" opacity="0.6"/>
+  <circle cx="148" cy="80" r="2" fill="#87CEEB" opacity="0.6"/>
+  
+  <!-- Squirrel (enemy) -->
+  <!-- Body -->
+  <ellipse cx="40" cy="80" rx="12" ry="8" fill="#D2691E"/>
+  <!-- Head -->
+  <circle cx="50" cy="75" r="8" fill="#D2691E"/>
+  <!-- Tail -->
+  <ellipse cx="25" cy="80" rx="10" ry="6" fill="#D2691E"/>
+  <!-- Eyes -->
+  <circle cx="48" cy="73" r="2" fill="#000"/>
+  <circle cx="52" cy="73" r="2" fill="#000"/>
+</svg>
