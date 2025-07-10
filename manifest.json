@@ -7,7 +7,7 @@
   "display_override": ["fullscreen", "standalone", "minimal-ui"],
   "background_color": "#2d4a2b",
   "theme_color": "#2d4a2b",
-  "orientation": "landscape-primary",
+  "orientation": "portrait-primary",
   "categories": ["games", "entertainment"],
   "scope": "/",
   "prefer_related_applications": false,

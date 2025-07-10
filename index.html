@@ -12,9 +12,9 @@
   <meta name="theme-color" content="#000000" />
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#2d4a2b" />
-  <!-- Orientation and fullscreen -->
-  <meta name="screen-orientation" content="landscape-primary" />
-  <meta name="orientation" content="landscape-primary" />
+  <!-- Orientation and fullscreen - prefer portrait -->
+  <meta name="screen-orientation" content="portrait-primary" />
+  <meta name="orientation" content="portrait-primary" />
   <!-- Disable browser features that interfere with games -->
   <meta name="format-detection" content="telephone=no" />
   <meta name="msapplication-tap-highlight" content="no" />
@@ -152,18 +152,18 @@
       height: 100dvh; /* Dynamic viewport height for better mobile support */
     }
   </style>
-  <script type="module" crossorigin src="/garden-defender/assets/index-d6LyjJXQ.js"></script>
-  <link rel="stylesheet" crossorigin href="/garden-defender/assets/index-BRNBypTv.css">
+  <script type="module" crossorigin src="/garden-defender/assets/index-DmiwRsbS.js"></script>
+  <link rel="stylesheet" crossorigin href="/garden-defender/assets/index-B54qPwjK.css">
 </head>
 <body>
   <div id="game-container">
     <h1 id="game-title">🌱 Garden Defender 🦝</h1>
     
-    <!-- Rotation prompt for mobile portrait mode -->
+    <!-- Rotation prompt for mobile landscape mode -->
     <div id="rotation-prompt">
       <div class="rotate-icon">🔄</div>
       <div>Please rotate your device</div>
-      <div>to landscape orientation</div>
+      <div>to portrait orientation</div>
       <div style="font-size: 0.8em; margin-top: 20px;">For the best gaming experience</div>
     </div>
     
@@ -180,7 +180,7 @@
         </div>
         <div id="instructions">
           <p class="desktop-only">🎮 Arrow keys: move<br>🚿 SPACE + L/R: spray/tap<br>⏸️ P: pause<br>🚪 ESC: quit</p>
-          <p class="mobile-only">🎮 Best in landscape mode<br>🚿 Use touch controls<br>🚰 Near tap + spray = turn on</p>
+          <p class="mobile-only">🎮 Optimized for portrait mode<br>🚿 Use touch controls<br>🚰 Near tap + spray = turn on</p>
         </div>
       </div>
       
@@ -193,7 +193,7 @@
             <p>🦝 Raccoons can carry TWO vegetables at once!</p>
             <p>💧 Use your water spray to stop them</p>
             <p>🚰 Turn on the water tap if enemies turn it off</p>
-            <p class="mobile-only">📱 Rotate to landscape for best mobile experience</p>
+            <p class="mobile-only">📱 Hold device in portrait for best mobile experience</p>
             <button id="start-game-btn">🎮 Start New Game</button>
           </div>
         </div>
