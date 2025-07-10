@@ -152,8 +152,8 @@
       height: 100dvh; /* Dynamic viewport height for better mobile support */
     }
   </style>
-  <script type="module" crossorigin src="/garden-defender/assets/index-C7J85WNu.js"></script>
-  <link rel="stylesheet" crossorigin href="/garden-defender/assets/index-BpXGD-ds.css">
+  <script type="module" crossorigin src="/garden-defender/assets/index-LBxL7dYp.js"></script>
+  <link rel="stylesheet" crossorigin href="/garden-defender/assets/index-wy12EVaX.css">
 </head>
 <body>
   <div id="game-container">
@@ -167,20 +167,49 @@
       <div style="font-size: 0.8em; margin-top: 20px;">For the best gaming experience</div>
     </div>
     
-    <div id="start-screen">
-      <div id="start-content">
-        <h2>Defend Your Garden!</h2>
-        <p>🐿️ Squirrels will steal your vegetables one at a time</p>
-        <p>🦝 Raccoons can carry TWO vegetables at once!</p>
-        <p>💧 Use your water spray to stop them</p>
-        <p>🚰 Turn on the water tap if enemies turn it off</p>
-        <p class="mobile-only">📱 Rotate to landscape for best mobile experience</p>
-        <button id="start-game-btn">🎮 Start New Game</button>
+    <!-- Main game layout with centered canvas and side panels -->
+    <div id="game-layout">
+      <!-- Left side panel -->
+      <div id="left-panel" class="side-panel">
+        <div id="game-stats">
+          <div id="score">Score: 0</div>
+          <div id="round">Round: 1</div>
+          <div id="timer">Time: 60</div>
+          <div id="vegetables-left">Vegetables: 0</div>
+          <div id="pause-status"></div>
+        </div>
+        <div id="instructions">
+          <p class="desktop-only">🎮 Arrow keys: move<br>🚿 SPACE + L/R: spray/tap<br>⏸️ P: pause<br>🚪 ESC: quit</p>
+          <p class="mobile-only">🎮 Best in landscape mode<br>🚿 Use touch controls<br>🚰 Near tap + spray = turn on</p>
+        </div>
+      </div>
+      
+      <!-- Center game area -->
+      <div id="game-center">
+        <div id="start-screen">
+          <div id="start-content">
+            <h2>Defend Your Garden!</h2>
+            <p>🐿️ Squirrels will steal your vegetables one at a time</p>
+            <p>🦝 Raccoons can carry TWO vegetables at once!</p>
+            <p>💧 Use your water spray to stop them</p>
+            <p>🚰 Turn on the water tap if enemies turn it off</p>
+            <p class="mobile-only">📱 Rotate to landscape for best mobile experience</p>
+            <button id="start-game-btn">🎮 Start New Game</button>
+          </div>
+        </div>
+        <div id="game"></div>
+      </div>
+      
+      <!-- Right side panel -->
+      <div id="right-panel" class="side-panel">
+        <div id="game-controls">
+          <button id="music-toggle">🎵 Music: ON</button>
+          <button id="quit-game-btn">🚪 Quit Game</button>
+        </div>
       </div>
     </div>
-    <div id="game"></div>
     
-    <!-- Mobile Touch Controls -->
+    <!-- Mobile Touch Controls (overlay style) -->
     <div id="mobile-controls">
       <div id="dpad">
         <button id="up-btn" class="dpad-btn">▲</button>
@@ -195,20 +224,6 @@
         <button id="spray-btn" class="action-btn">💧 SPRAY<br>TAP ON</button>
         <button id="pause-btn" class="action-btn">⏸️</button>
       </div>
-    </div>
-    
-    <div id="ui">
-      <div id="score">Score: 0</div>
-      <div id="round">Round: 1</div>
-      <div id="timer">Time: 60</div>
-      <div id="vegetables-left">Vegetables: 0</div>
-      <div id="pause-status"></div>
-      <button id="music-toggle">🎵 Music: ON</button>
-      <button id="quit-game-btn">🚪 Quit Game</button>
-    </div>
-    <div id="instructions">
-      <p class="desktop-only">🎮 Use arrow keys to move, SPACE + L/R arrow to spray water/turn on tap, P to pause, ESC to quit</p>
-      <p class="mobile-only">🎮 For best experience, rotate your device to landscape mode. Use on-screen controls to move and spray water. Position near tap and press spray button to turn it on.</p>
     </div>
   </div>
 </body>
