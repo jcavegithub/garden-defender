@@ -2,12 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Garden Defender" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#2d4a2b" />
+  <meta name="screen-orientation" content="landscape-primary" />
+  <meta name="orientation" content="landscape-primary" />
   <link rel="manifest" href="/garden-defender/manifest.json" />
   <link rel="apple-touch-icon" href="/garden-defender/icon.svg" />
   <link rel="icon" type="image/svg+xml" href="/garden-defender/icon.svg" />
@@ -25,12 +27,21 @@
       -webkit-tap-highlight-color: transparent;
     }
   </style>
-  <script type="module" crossorigin src="/garden-defender/assets/index-D1UO-CO2.js"></script>
-  <link rel="stylesheet" crossorigin href="/garden-defender/assets/index-D51w_9SJ.css">
+  <script type="module" crossorigin src="/garden-defender/assets/index-BXqz7KO_.js"></script>
+  <link rel="stylesheet" crossorigin href="/garden-defender/assets/index-d7CAGXxB.css">
 </head>
 <body>
   <div id="game-container">
     <h1 id="game-title">🌱 Garden Defender 🦝</h1>
+    
+    <!-- Rotation prompt for mobile portrait mode -->
+    <div id="rotation-prompt">
+      <div class="rotate-icon">🔄</div>
+      <div>Please rotate your device</div>
+      <div>to landscape orientation</div>
+      <div style="font-size: 0.8em; margin-top: 20px;">For the best gaming experience</div>
+    </div>
+    
     <div id="start-screen">
       <div id="start-content">
         <h2>Defend Your Garden!</h2>
@@ -38,6 +49,7 @@
         <p>🦝 Raccoons can carry TWO vegetables at once!</p>
         <p>💧 Use your water spray to stop them</p>
         <p>🚰 Turn on the water tap if enemies turn it off</p>
+        <p class="mobile-only">📱 Rotate to landscape for best mobile experience</p>
         <button id="start-game-btn">🎮 Start New Game</button>
       </div>
     </div>
@@ -55,7 +67,7 @@
         <button id="down-btn" class="dpad-btn">▼</button>
       </div>
       <div id="action-buttons">
-        <button id="spray-btn" class="action-btn">💧 SPRAY</button>
+        <button id="spray-btn" class="action-btn">💧 SPRAY<br>TAP ON</button>
         <button id="pause-btn" class="action-btn">⏸️</button>
       </div>
     </div>
@@ -71,7 +83,7 @@
     </div>
     <div id="instructions">
       <p class="desktop-only">🎮 Use arrow keys to move, SPACE + L/R arrow to spray water/turn on tap, P to pause, ESC to quit</p>
-      <p class="mobile-only">🎮 Use on-screen controls to move and spray water. Tap pause to pause game.</p>
+      <p class="mobile-only">🎮 For best experience, rotate your device to landscape mode. Use on-screen controls to move and spray water. Position near tap and press spray button to turn it on.</p>
     </div>
   </div>
 </body>
