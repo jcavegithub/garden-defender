@@ -1,0 +1,38 @@
+{
+  "name": "Garden Defender",
+  "short_name": "Garden Defender",
+  "description": "Defend your vegetable garden from hungry squirrels and raccoons!",
+  "start_url": "/garden-defender/",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "background_color": "#2d4a2b",
+  "theme_color": "#2d4a2b",
+  "orientation": "portrait-primary",
+  "categories": ["games", "entertainment"],
+  "scope": "/garden-defender/",
+  "prefer_related_applications": false,
+  "lang": "en-US",
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Start New Game",
+      "short_name": "New Game",
+      "description": "Start a new game of Garden Defender",
+      "url": "/garden-defender/?action=new-game",
+      "icons": [
+        {
+          "src": "/garden-defender/icon.svg",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "icons": [
+    {
+      "src": "/garden-defender/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

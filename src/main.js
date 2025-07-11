@@ -21,6 +21,7 @@ class GameScene extends Phaser.Scene {
         this.lastSquirrelSpawn = 0;
         this.lastRaccoonSpawn = 0;
         this.gameTimer = null;
+        this.lastTimerUpdate = 0; // For manual timer handling
         this.roundActive = false; // Start as false until game is started
         this.gamePaused = false;
         this.gameStarted = false; // New property to track if game has been started
@@ -28,7 +29,49 @@ class GameScene extends Phaser.Scene {
         this.audioContext = null; // For sound effects
         this.musicGainNode = null; // For background music
         this.musicPlaying = false;
-        this.waterTap = null; // Water tap object
+        this.soundsEnabled = true; // Track if sound effects are enabled
+        this.waterTapBody = null; // Water tap body object
+        this.waterTapHandle = null; // Water tap handle object
+        this.waterEnabled = true; // Whether water spray is available
+        this.lastSprayTime = 0; // Track timing for continuous spray
+        
+        // Movement tracking variables to preserve spray rotation
+        this.wasMovingLeft = false;
+        this.wasMovingRight = false;
+        this.wasMovingUp = false;
+        this.wasMovingDown = false;
+        
+        // Mobile controls - now joystick based
+        this.mobileControls = {
+            up: false,
+            down: false,
+            left: false,
+            right: false,
+            spray: false,
+            sprayJustPressed: false  // Track if spray was just pressed this frame
+        };
+        
+        // Virtual joystick properties
+        this.joystick = {
+            isDragging: false,
+            knob: null,
+            base: null,
+            centerX: 0,
+            centerY: 0,
+            maxDistance: 35, // Maximum distance from center
+            deadZone: 0.2,   // Minimum threshold for movement
+            currentX: 0,
+            currentY: 0,
+            normalizedX: 0,  // -1 to 1
+            normalizedY: 0   // -1 to 1
+        };
+        this.isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 900;
+        this.isAndroid = /Android/i.test(navigator.userAgent);
+        this.isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        this.isLandscape = window.innerWidth > window.innerHeight;
+        this.isPortrait = window.innerHeight > window.innerWidth;
+        this.waterTapBody = null; // Water tap body object
+        this.waterTapHandle = null; // Water tap handle object
         this.waterEnabled = true; // Whether water spray is available
         this.lastSprayTime = 0; // Track timing for continuous spray
     }
@@ -67,177 +110,177 @@ class GameScene extends Phaser.Scene {
         grassGraphics.generateTexture('grass', 32, 32);
         grassGraphics.destroy();
 
-        // Create realistic gardener sprite (body only, arms and legs separate)
+        // Create realistic gardener sprite (body only, arms and legs separate) - 50% larger
         const gardenerGraphics = this.add.graphics();
         
         // Body (brown shirt)
         gardenerGraphics.fillStyle(0x8B4513);
-        gardenerGraphics.fillRect(10, 12, 12, 16);
+        gardenerGraphics.fillRect(15, 18, 18, 24); // Scaled by 1.5: 10*1.5=15, 12*1.5=18, 12*1.5=18, 16*1.5=24
         
         // Head (skin tone)
         gardenerGraphics.fillStyle(0xFFDBAE);
-        gardenerGraphics.fillCircle(16, 8, 6);
+        gardenerGraphics.fillCircle(24, 12, 9); // Scaled by 1.5: 16*1.5=24, 8*1.5=12, 6*1.5=9
         
         // Hat (green)
         gardenerGraphics.fillStyle(0x228B22);
-        gardenerGraphics.fillRect(11, 2, 10, 4);
-        gardenerGraphics.fillCircle(16, 4, 5);
+        gardenerGraphics.fillRect(16.5, 3, 15, 6); // Scaled by 1.5: 11*1.5=16.5, 2*1.5=3, 10*1.5=15, 4*1.5=6
+        gardenerGraphics.fillCircle(24, 6, 7.5); // Scaled by 1.5: 16*1.5=24, 4*1.5=6, 5*1.5=7.5
         
         // Hair (brown showing under hat)
         gardenerGraphics.fillStyle(0x654321);
-        gardenerGraphics.fillRect(12, 6, 8, 2);
+        gardenerGraphics.fillRect(18, 9, 12, 3); // Scaled by 1.5: 12*1.5=18, 6*1.5=9, 8*1.5=12, 2*1.5=3
         
         // Eyes
         gardenerGraphics.fillStyle(0x000000);
-        gardenerGraphics.fillCircle(14, 7, 1);
-        gardenerGraphics.fillCircle(18, 7, 1);
+        gardenerGraphics.fillCircle(21, 10.5, 1.5); // Scaled by 1.5: 14*1.5=21, 7*1.5=10.5, 1*1.5=1.5
+        gardenerGraphics.fillCircle(27, 10.5, 1.5); // Scaled by 1.5: 18*1.5=27, 7*1.5=10.5, 1*1.5=1.5
         
         // Nose
         gardenerGraphics.fillStyle(0xFFB86C);
-        gardenerGraphics.fillCircle(16, 9, 1);
+        gardenerGraphics.fillCircle(24, 13.5, 1.5); // Scaled by 1.5: 16*1.5=24, 9*1.5=13.5, 1*1.5=1.5
         
         // Hose (blue, indicating direction)
         gardenerGraphics.fillStyle(0x1E90FF);
-        gardenerGraphics.fillRect(24, 16, 6, 2);
-        gardenerGraphics.fillCircle(30, 17, 2);
+        gardenerGraphics.fillRect(36, 24, 9, 3); // Scaled by 1.5: 24*1.5=36, 16*1.5=24, 6*1.5=9, 2*1.5=3
+        gardenerGraphics.fillCircle(45, 25.5, 3); // Scaled by 1.5: 30*1.5=45, 17*1.5=25.5, 2*1.5=3
         
-        gardenerGraphics.generateTexture('gardener', 32, 28);
+        gardenerGraphics.generateTexture('gardener', 48, 42); // Increased by 50%: 32*1.5=48, 28*1.5=42
         gardenerGraphics.destroy();
 
-        // Create gardener arm sprite (for animation)
+        // Create gardener arm sprite (for animation) - 50% larger
         const armGraphics = this.add.graphics();
         
         // Arm (skin tone)
         armGraphics.fillStyle(0xFFDBAE);
-        armGraphics.fillRect(0, 0, 4, 12);  // Arm
+        armGraphics.fillRect(0, 0, 6, 18);  // Scaled by 1.5: 4*1.5=6, 12*1.5=18
         
         // Hand
         armGraphics.fillStyle(0xFFDBAE);
-        armGraphics.fillCircle(2, 12, 2);
+        armGraphics.fillCircle(3, 18, 3); // Scaled by 1.5: 2*1.5=3, 12*1.5=18, 2*1.5=3
         
-        armGraphics.generateTexture('gardener-arm', 4, 16);
+        armGraphics.generateTexture('gardener-arm', 6, 24); // Increased by 50%: 4*1.5=6, 16*1.5=24
         armGraphics.destroy();
 
-        // Create gardener leg sprite (for animation)
+        // Create gardener leg sprite (for animation) - 50% larger
         const legGraphics = this.add.graphics();
         
         // Leg (blue jeans)
         legGraphics.fillStyle(0x4169E1);
-        legGraphics.fillRect(0, 0, 4, 12);  // Leg
+        legGraphics.fillRect(0, 0, 6, 18);  // Scaled by 1.5: 4*1.5=6, 12*1.5=18
         
         // Boot (brown)
         legGraphics.fillStyle(0x654321);
-        legGraphics.fillRect(-1, 12, 6, 4);  // Boot
+        legGraphics.fillRect(-1.5, 18, 9, 6);  // Scaled by 1.5: -1*1.5=-1.5, 12*1.5=18, 6*1.5=9, 4*1.5=6
         
-        legGraphics.generateTexture('gardener-leg', 6, 16);
+        legGraphics.generateTexture('gardener-leg', 9, 24); // Increased by 50%: 6*1.5=9, 16*1.5=24
         legGraphics.destroy();
 
-        // Create realistic squirrel sprite
+        // Create realistic squirrel sprite - 50% larger
         const squirrelGraphics = this.add.graphics();
         
         // Body (brown)
         squirrelGraphics.fillStyle(0x8B4513);
-        squirrelGraphics.fillCircle(12, 14, 8);
+        squirrelGraphics.fillCircle(18, 21, 12); // Scaled by 1.5: 12*1.5=18, 14*1.5=21, 8*1.5=12
         
         // Head (lighter brown)
         squirrelGraphics.fillStyle(0xCD853F);
-        squirrelGraphics.fillCircle(12, 8, 6);
+        squirrelGraphics.fillCircle(18, 12, 9); // Scaled by 1.5: 12*1.5=18, 8*1.5=12, 6*1.5=9
         
         // Ears (brown with pink inside)
         squirrelGraphics.fillStyle(0x8B4513);
-        squirrelGraphics.fillCircle(8, 4, 3);
-        squirrelGraphics.fillCircle(16, 4, 3);
+        squirrelGraphics.fillCircle(12, 6, 4.5); // Scaled by 1.5: 8*1.5=12, 4*1.5=6, 3*1.5=4.5
+        squirrelGraphics.fillCircle(24, 6, 4.5); // Scaled by 1.5: 16*1.5=24, 4*1.5=6, 3*1.5=4.5
         squirrelGraphics.fillStyle(0xFFB6C1);
-        squirrelGraphics.fillCircle(8, 4, 1);
-        squirrelGraphics.fillCircle(16, 4, 1);
+        squirrelGraphics.fillCircle(12, 6, 1.5); // Scaled by 1.5: 8*1.5=12, 4*1.5=6, 1*1.5=1.5
+        squirrelGraphics.fillCircle(24, 6, 1.5); // Scaled by 1.5: 16*1.5=24, 4*1.5=6, 1*1.5=1.5
         
         // Eyes (black with white highlights)
         squirrelGraphics.fillStyle(0x000000);
-        squirrelGraphics.fillCircle(9, 7, 2);
-        squirrelGraphics.fillCircle(15, 7, 2);
+        squirrelGraphics.fillCircle(13.5, 10.5, 3); // Scaled by 1.5: 9*1.5=13.5, 7*1.5=10.5, 2*1.5=3
+        squirrelGraphics.fillCircle(22.5, 10.5, 3); // Scaled by 1.5: 15*1.5=22.5, 7*1.5=10.5, 2*1.5=3
         squirrelGraphics.fillStyle(0xFFFFFF);
-        squirrelGraphics.fillCircle(9, 6, 1);
-        squirrelGraphics.fillCircle(15, 6, 1);
+        squirrelGraphics.fillCircle(13.5, 9, 1.5); // Scaled by 1.5: 9*1.5=13.5, 6*1.5=9, 1*1.5=1.5
+        squirrelGraphics.fillCircle(22.5, 9, 1.5); // Scaled by 1.5: 15*1.5=22.5, 6*1.5=9, 1*1.5=1.5
         
         // Nose (black)
         squirrelGraphics.fillStyle(0x000000);
-        squirrelGraphics.fillCircle(12, 9, 1);
+        squirrelGraphics.fillCircle(18, 13.5, 1.5); // Scaled by 1.5: 12*1.5=18, 9*1.5=13.5, 1*1.5=1.5
         
         // Tail (bushy, reddish-brown)
         squirrelGraphics.fillStyle(0xA0522D);
-        squirrelGraphics.fillCircle(18, 12, 5);
-        squirrelGraphics.fillCircle(20, 8, 4);
-        squirrelGraphics.fillCircle(22, 5, 3);
+        squirrelGraphics.fillCircle(27, 18, 7.5); // Scaled by 1.5: 18*1.5=27, 12*1.5=18, 5*1.5=7.5
+        squirrelGraphics.fillCircle(30, 12, 6); // Scaled by 1.5: 20*1.5=30, 8*1.5=12, 4*1.5=6
+        squirrelGraphics.fillCircle(33, 7.5, 4.5); // Scaled by 1.5: 22*1.5=33, 5*1.5=7.5, 3*1.5=4.5
         
         // Paws
         squirrelGraphics.fillStyle(0x654321);
-        squirrelGraphics.fillCircle(7, 18, 2);   // Front left
-        squirrelGraphics.fillCircle(17, 18, 2);  // Front right
-        squirrelGraphics.fillCircle(8, 20, 2);   // Back left
-        squirrelGraphics.fillCircle(16, 20, 2);  // Back right
+        squirrelGraphics.fillCircle(10.5, 27, 3); // Scaled by 1.5: 7*1.5=10.5, 18*1.5=27, 2*1.5=3
+        squirrelGraphics.fillCircle(25.5, 27, 3); // Scaled by 1.5: 17*1.5=25.5, 18*1.5=27, 2*1.5=3
+        squirrelGraphics.fillCircle(12, 30, 3); // Scaled by 1.5: 8*1.5=12, 20*1.5=30, 2*1.5=3
+        squirrelGraphics.fillCircle(24, 30, 3); // Scaled by 1.5: 16*1.5=24, 20*1.5=30, 2*1.5=3
         
-        squirrelGraphics.generateTexture('squirrel', 24, 24);
+        squirrelGraphics.generateTexture('squirrel', 36, 36); // Increased by 50%: 24*1.5=36
         squirrelGraphics.destroy();
 
-        // Create realistic raccoon sprite
+        // Create realistic raccoon sprite - 50% larger
         const raccoonGraphics = this.add.graphics();
         
         // Body (gray)
         raccoonGraphics.fillStyle(0x696969);
-        raccoonGraphics.fillCircle(16, 20, 10);
+        raccoonGraphics.fillCircle(24, 30, 15); // Scaled by 1.5: 16*1.5=24, 20*1.5=30, 10*1.5=15
         
         // Head (lighter gray)
         raccoonGraphics.fillStyle(0x808080);
-        raccoonGraphics.fillCircle(16, 10, 8);
+        raccoonGraphics.fillCircle(24, 15, 12); // Scaled by 1.5: 16*1.5=24, 10*1.5=15, 8*1.5=12
         
         // Distinctive raccoon mask (black around eyes)
         raccoonGraphics.fillStyle(0x000000);
-        raccoonGraphics.fillRect(8, 7, 16, 6);
+        raccoonGraphics.fillRect(12, 10.5, 24, 9); // Scaled by 1.5: 8*1.5=12, 7*1.5=10.5, 16*1.5=24, 6*1.5=9
         
         // Face area inside mask (light gray)
         raccoonGraphics.fillStyle(0xD3D3D3);
-        raccoonGraphics.fillRect(10, 8, 12, 4);
+        raccoonGraphics.fillRect(15, 12, 18, 6); // Scaled by 1.5: 10*1.5=15, 8*1.5=12, 12*1.5=18, 4*1.5=6
         
         // Eyes (black with white highlights)
         raccoonGraphics.fillStyle(0x000000);
-        raccoonGraphics.fillCircle(12, 9, 2);
-        raccoonGraphics.fillCircle(20, 9, 2);
+        raccoonGraphics.fillCircle(18, 13.5, 3); // Scaled by 1.5: 12*1.5=18, 9*1.5=13.5, 2*1.5=3
+        raccoonGraphics.fillCircle(30, 13.5, 3); // Scaled by 1.5: 20*1.5=30, 9*1.5=13.5, 2*1.5=3
         raccoonGraphics.fillStyle(0xFFFFFF);
-        raccoonGraphics.fillCircle(12, 8, 1);
-        raccoonGraphics.fillCircle(20, 8, 1);
+        raccoonGraphics.fillCircle(18, 12, 1.5); // Scaled by 1.5: 12*1.5=18, 8*1.5=12, 1*1.5=1.5
+        raccoonGraphics.fillCircle(30, 12, 1.5); // Scaled by 1.5: 20*1.5=30, 8*1.5=12, 1*1.5=1.5
         
         // Nose (black)
         raccoonGraphics.fillStyle(0x000000);
-        raccoonGraphics.fillCircle(16, 12, 1);
+        raccoonGraphics.fillCircle(24, 18, 1.5); // Scaled by 1.5: 16*1.5=24, 12*1.5=18, 1*1.5=1.5
         
         // Ears (gray with pink inside)
         raccoonGraphics.fillStyle(0x696969);
-        raccoonGraphics.fillCircle(10, 4, 3);
-        raccoonGraphics.fillCircle(22, 4, 3);
+        raccoonGraphics.fillCircle(15, 6, 4.5); // Scaled by 1.5: 10*1.5=15, 4*1.5=6, 3*1.5=4.5
+        raccoonGraphics.fillCircle(33, 6, 4.5); // Scaled by 1.5: 22*1.5=33, 4*1.5=6, 3*1.5=4.5
         raccoonGraphics.fillStyle(0xFFB6C1);
-        raccoonGraphics.fillCircle(10, 4, 1);
-        raccoonGraphics.fillCircle(22, 4, 1);
+        raccoonGraphics.fillCircle(15, 6, 1.5); // Scaled by 1.5: 10*1.5=15, 4*1.5=6, 1*1.5=1.5
+        raccoonGraphics.fillCircle(33, 6, 1.5); // Scaled by 1.5: 22*1.5=33, 4*1.5=6, 1*1.5=1.5
         
         // Tail with rings (characteristic raccoon stripes)
         raccoonGraphics.fillStyle(0x696969);
-        raccoonGraphics.fillCircle(28, 18, 4);
-        raccoonGraphics.fillCircle(30, 14, 3);
-        raccoonGraphics.fillCircle(31, 10, 2);
+        raccoonGraphics.fillCircle(42, 27, 6); // Scaled by 1.5: 28*1.5=42, 18*1.5=27, 4*1.5=6
+        raccoonGraphics.fillCircle(45, 21, 4.5); // Scaled by 1.5: 30*1.5=45, 14*1.5=21, 3*1.5=4.5
+        raccoonGraphics.fillCircle(46.5, 15, 3); // Scaled by 1.5: 31*1.5=46.5, 10*1.5=15, 2*1.5=3
         
         // Dark rings on tail
         raccoonGraphics.fillStyle(0x2F2F2F);
-        raccoonGraphics.fillRect(26, 16, 4, 2);
-        raccoonGraphics.fillRect(28, 12, 3, 2);
-        raccoonGraphics.fillRect(29, 8, 2, 2);
+        raccoonGraphics.fillRect(39, 24, 6, 3); // Scaled by 1.5: 26*1.5=39, 16*1.5=24, 4*1.5=6, 2*1.5=3
+        raccoonGraphics.fillRect(42, 18, 4.5, 3); // Scaled by 1.5: 28*1.5=42, 12*1.5=18, 3*1.5=4.5, 2*1.5=3
+        raccoonGraphics.fillRect(43.5, 12, 3, 3); // Scaled by 1.5: 29*1.5=43.5, 8*1.5=12, 2*1.5=3, 2*1.5=3
         
         // Paws (dark gray)
         raccoonGraphics.fillStyle(0x2F2F2F);
-        raccoonGraphics.fillCircle(8, 26, 3);   // Front left
-        raccoonGraphics.fillCircle(24, 26, 3);  // Front right
-        raccoonGraphics.fillCircle(10, 28, 3);  // Back left
-        raccoonGraphics.fillCircle(22, 28, 3);  // Back right
+        raccoonGraphics.fillCircle(12, 39, 4.5); // Scaled by 1.5: 8*1.5=12, 26*1.5=39, 3*1.5=4.5
+        raccoonGraphics.fillCircle(36, 39, 4.5); // Scaled by 1.5: 24*1.5=36, 26*1.5=39, 3*1.5=4.5
+        raccoonGraphics.fillCircle(15, 42, 4.5); // Scaled by 1.5: 10*1.5=15, 28*1.5=42, 3*1.5=4.5
+        raccoonGraphics.fillCircle(33, 42, 4.5); // Scaled by 1.5: 22*1.5=33, 28*1.5=42, 3*1.5=4.5
         
-        raccoonGraphics.generateTexture('raccoon', 32, 32);
+        raccoonGraphics.generateTexture('raccoon', 48, 48); // Increased by 50%: 32*1.5=48
         raccoonGraphics.destroy();
 
         // Create realistic carrot sprite
@@ -245,29 +288,29 @@ class GameScene extends Phaser.Scene {
         
         // Carrot body (orange gradient effect)
         carrotGraphics.fillStyle(0xFF8C00);
-        carrotGraphics.fillRect(6, 4, 4, 12);
+        carrotGraphics.fillRect(9, 6, 6, 18);
         carrotGraphics.fillStyle(0xFF7F00);
-        carrotGraphics.fillRect(5, 6, 6, 8);
+        carrotGraphics.fillRect(7.5, 9, 9, 12);
         carrotGraphics.fillStyle(0xFFA500);
-        carrotGraphics.fillRect(4, 8, 8, 4);
+        carrotGraphics.fillRect(6, 12, 12, 6);
         
         // Carrot lines (texture)
         carrotGraphics.fillStyle(0xE6700A);
-        carrotGraphics.fillRect(4, 9, 8, 1);
-        carrotGraphics.fillRect(5, 11, 6, 1);
-        carrotGraphics.fillRect(6, 13, 4, 1);
+        carrotGraphics.fillRect(6, 13.5, 12, 1.5);
+        carrotGraphics.fillRect(7.5, 16.5, 9, 1.5);
+        carrotGraphics.fillRect(9, 19.5, 6, 1.5);
         
         // Carrot top (green leaves)
         carrotGraphics.fillStyle(0x228B22);
-        carrotGraphics.fillRect(6, 0, 2, 6);
-        carrotGraphics.fillRect(8, 1, 2, 5);
-        carrotGraphics.fillRect(4, 2, 2, 4);
+        carrotGraphics.fillRect(9, 0, 3, 9);
+        carrotGraphics.fillRect(12, 1.5, 3, 7.5);
+        carrotGraphics.fillRect(6, 3, 3, 6);
         carrotGraphics.fillStyle(0x32CD32);
-        carrotGraphics.fillRect(5, 0, 1, 4);
-        carrotGraphics.fillRect(7, 1, 1, 4);
-        carrotGraphics.fillRect(9, 2, 1, 3);
+        carrotGraphics.fillRect(7.5, 0, 1.5, 6);
+        carrotGraphics.fillRect(10.5, 1.5, 1.5, 6);
+        carrotGraphics.fillRect(13.5, 3, 1.5, 4.5);
         
-        carrotGraphics.generateTexture('carrot', 16, 16);
+        carrotGraphics.generateTexture('carrot', 24, 24); // Increased by 50%: 16*1.5=24
         carrotGraphics.destroy();
 
         // Create realistic tomato sprite
@@ -275,28 +318,28 @@ class GameScene extends Phaser.Scene {
         
         // Tomato body (red with shading)
         tomatoGraphics.fillStyle(0xFF6347);
-        tomatoGraphics.fillCircle(8, 10, 6);
+        tomatoGraphics.fillCircle(12, 15, 9);
         tomatoGraphics.fillStyle(0xFF4500);
-        tomatoGraphics.fillCircle(6, 8, 2);  // Shadow
+        tomatoGraphics.fillCircle(9, 12, 3);  // Shadow
         tomatoGraphics.fillStyle(0xFF7F7F);
-        tomatoGraphics.fillCircle(10, 12, 2); // Highlight
+        tomatoGraphics.fillCircle(15, 18, 3); // Highlight
         
         // Tomato segments (realistic lines)
         tomatoGraphics.fillStyle(0xDC143C);
-        tomatoGraphics.fillRect(8, 4, 1, 12);
-        tomatoGraphics.fillRect(5, 8, 6, 1);
-        tomatoGraphics.fillRect(6, 6, 4, 1);
-        tomatoGraphics.fillRect(6, 12, 4, 1);
+        tomatoGraphics.fillRect(12, 6, 1.5, 18);
+        tomatoGraphics.fillRect(7.5, 12, 9, 1.5);
+        tomatoGraphics.fillRect(9, 9, 6, 1.5);
+        tomatoGraphics.fillRect(9, 18, 6, 1.5);
         
         // Stem (green)
         tomatoGraphics.fillStyle(0x228B22);
-        tomatoGraphics.fillRect(6, 2, 4, 3);
+        tomatoGraphics.fillRect(9, 3, 6, 4.5);
         tomatoGraphics.fillStyle(0x32CD32);
-        tomatoGraphics.fillRect(5, 1, 2, 2);
-        tomatoGraphics.fillRect(9, 1, 2, 2);
-        tomatoGraphics.fillRect(7, 0, 2, 2);
+        tomatoGraphics.fillRect(7.5, 1.5, 3, 3);
+        tomatoGraphics.fillRect(13.5, 1.5, 3, 3);
+        tomatoGraphics.fillRect(10.5, 0, 3, 3);
         
-        tomatoGraphics.generateTexture('tomato', 16, 16);
+        tomatoGraphics.generateTexture('tomato', 24, 24); // Increased by 50%: 16*1.5=24
         tomatoGraphics.destroy();
 
         // Create realistic lettuce sprite
@@ -304,29 +347,29 @@ class GameScene extends Phaser.Scene {
         
         // Lettuce base (light green)
         lettuceGraphics.fillStyle(0x90EE90);
-        lettuceGraphics.fillCircle(8, 10, 6);
+        lettuceGraphics.fillCircle(12, 15, 9);
         
         // Lettuce leaves (layered for depth)
         lettuceGraphics.fillStyle(0x228B22);
-        lettuceGraphics.fillCircle(6, 8, 4);
-        lettuceGraphics.fillCircle(10, 8, 4);
-        lettuceGraphics.fillCircle(8, 6, 3);
-        lettuceGraphics.fillCircle(8, 12, 4);
+        lettuceGraphics.fillCircle(9, 12, 6);
+        lettuceGraphics.fillCircle(15, 12, 6);
+        lettuceGraphics.fillCircle(12, 9, 4.5);
+        lettuceGraphics.fillCircle(12, 18, 6);
         
         // Leaf veins (darker green)
         lettuceGraphics.fillStyle(0x006400);
-        lettuceGraphics.fillRect(8, 4, 1, 8);
-        lettuceGraphics.fillRect(5, 8, 6, 1);
-        lettuceGraphics.fillRect(6, 6, 4, 1);
-        lettuceGraphics.fillRect(6, 10, 4, 1);
+        lettuceGraphics.fillRect(12, 6, 1.5, 12);
+        lettuceGraphics.fillRect(7.5, 12, 9, 1.5);
+        lettuceGraphics.fillRect(9, 9, 6, 1.5);
+        lettuceGraphics.fillRect(9, 15, 6, 1.5);
         
         // Highlights (lighter green)
         lettuceGraphics.fillStyle(0x98FB98);
-        lettuceGraphics.fillCircle(6, 7, 2);
-        lettuceGraphics.fillCircle(10, 9, 2);
-        lettuceGraphics.fillCircle(8, 11, 1);
+        lettuceGraphics.fillCircle(9, 10.5, 3);
+        lettuceGraphics.fillCircle(15, 13.5, 3);
+        lettuceGraphics.fillCircle(12, 16.5, 1.5);
         
-        lettuceGraphics.generateTexture('lettuce', 16, 16);
+        lettuceGraphics.generateTexture('lettuce', 24, 24); // Increased by 50%: 16*1.5=24
         lettuceGraphics.destroy();
 
         // Create realistic water spray sprite
@@ -334,103 +377,115 @@ class GameScene extends Phaser.Scene {
         
         // Main water droplet (blue with transparency effect)
         waterGraphics.fillStyle(0x00BFFF);
-        waterGraphics.fillCircle(4, 4, 3);
+        waterGraphics.fillCircle(6, 6, 4.5);
         
         // Water highlights (lighter blue)
         waterGraphics.fillStyle(0x87CEEB);
-        waterGraphics.fillCircle(3, 3, 1);
-        waterGraphics.fillCircle(5, 5, 1);
+        waterGraphics.fillCircle(4.5, 4.5, 1.5);
+        waterGraphics.fillCircle(7.5, 7.5, 1.5);
         
         // Water shadow (darker blue)
         waterGraphics.fillStyle(0x4682B4);
-        waterGraphics.fillCircle(5, 5, 1);
+        waterGraphics.fillCircle(7.5, 7.5, 1.5);
         
-        waterGraphics.generateTexture('water', 8, 8);
+        waterGraphics.generateTexture('water', 12, 12);
         waterGraphics.destroy();
 
-        // Create realistic water tap sprite (ON)
-        const tapGraphics = this.add.graphics();
+        // Create tap body (shared between ON and OFF states)
+        const tapBodyGraphics = this.add.graphics();
         
         // Tap base (metallic gray)
-        tapGraphics.fillStyle(0x708090);
-        tapGraphics.fillRect(4, 8, 16, 20);
+        tapBodyGraphics.fillStyle(0x708090);
+        tapBodyGraphics.fillRect(6, 12, 24, 30);
         
         // Tap pipe (darker metal)
-        tapGraphics.fillStyle(0x2F4F4F);
-        tapGraphics.fillRect(8, 4, 8, 24);
+        tapBodyGraphics.fillStyle(0x2F4F4F);
+        tapBodyGraphics.fillRect(12, 6, 12, 36);
         
         // Pipe opening
-        tapGraphics.fillStyle(0x000000);
-        tapGraphics.fillCircle(12, 28, 2);
-        
-        // Handle base (green when on) - larger with black outline
-        tapGraphics.fillStyle(0x000000); // Black outline
-        tapGraphics.fillCircle(12, 8, 7);
-        tapGraphics.fillStyle(0x32CD32);
-        tapGraphics.fillCircle(12, 8, 5);
-        
-        // Handle lever (horizontal when on - green, thicker and longer) - with black outline
-        tapGraphics.fillStyle(0x000000); // Black outline
-        tapGraphics.fillRect(2, 5, 20, 6);
-        tapGraphics.fillCircle(2, 8, 3);
-        tapGraphics.fillCircle(22, 8, 3);
-        
-        tapGraphics.fillStyle(0x228B22);
-        tapGraphics.fillRect(3, 6, 18, 4);
-        tapGraphics.fillCircle(3, 8, 2);
-        tapGraphics.fillCircle(21, 8, 2);
+        tapBodyGraphics.fillStyle(0x000000);
+        tapBodyGraphics.fillCircle(18, 42, 3);
         
         // Metallic highlights
-        tapGraphics.fillStyle(0xC0C0C0);
-        tapGraphics.fillRect(5, 9, 2, 18);
-        tapGraphics.fillRect(9, 5, 2, 22);
+        tapBodyGraphics.fillStyle(0xC0C0C0);
+        tapBodyGraphics.fillRect(7.5, 13.5, 3, 27);
+        tapBodyGraphics.fillRect(13.5, 7.5, 3, 33);
         
         // Water drip (when on)
-        tapGraphics.fillStyle(0x00BFFF);
-        tapGraphics.fillCircle(12, 30, 1);
+        tapBodyGraphics.fillStyle(0x00BFFF);
+        tapBodyGraphics.fillCircle(18, 45, 1.5);
         
-        tapGraphics.generateTexture('tap-on', 24, 32);
-        tapGraphics.destroy();
+        tapBodyGraphics.generateTexture('tap-body-on', 36, 48);
+        tapBodyGraphics.destroy();
 
-        // Create realistic water tap sprite (OFF)
-        const tapOffGraphics = this.add.graphics();
+        // Create tap handle ON state (green, horizontal)
+        const tapHandleOnGraphics = this.add.graphics();
+        
+        // Handle base (green when on) - larger with black outline
+        tapHandleOnGraphics.fillStyle(0x000000); // Black outline
+        tapHandleOnGraphics.fillCircle(18, 12, 10.5);
+        tapHandleOnGraphics.fillStyle(0x32CD32);
+        tapHandleOnGraphics.fillCircle(18, 12, 7.5);
+        
+        // Handle lever (horizontal when on - green, thicker and longer) - with black outline
+        tapHandleOnGraphics.fillStyle(0x000000); // Black outline
+        tapHandleOnGraphics.fillRect(3, 7.5, 30, 9);
+        tapHandleOnGraphics.fillCircle(3, 12, 4.5);
+        tapHandleOnGraphics.fillCircle(33, 12, 4.5);
+        
+        tapHandleOnGraphics.fillStyle(0x228B22);
+        tapHandleOnGraphics.fillRect(4.5, 9, 27, 6);
+        tapHandleOnGraphics.fillCircle(4.5, 12, 3);
+        tapHandleOnGraphics.fillCircle(31.5, 12, 3);
+        
+        tapHandleOnGraphics.generateTexture('tap-handle-on', 36, 48);
+        tapHandleOnGraphics.destroy();
+
+        // Create tap body OFF state (no water drip)
+        const tapBodyOffGraphics = this.add.graphics();
         
         // Tap base (metallic gray)
-        tapOffGraphics.fillStyle(0x708090);
-        tapOffGraphics.fillRect(4, 8, 16, 20);
+        tapBodyOffGraphics.fillStyle(0x708090);
+        tapBodyOffGraphics.fillRect(6, 12, 24, 30);
         
         // Tap pipe (darker metal)
-        tapOffGraphics.fillStyle(0x2F4F4F);
-        tapOffGraphics.fillRect(8, 4, 8, 24);
+        tapBodyOffGraphics.fillStyle(0x2F4F4F);
+        tapBodyOffGraphics.fillRect(12, 6, 12, 36);
         
         // Pipe opening
-        tapOffGraphics.fillStyle(0x000000);
-        tapOffGraphics.fillCircle(12, 28, 2);
-        
-        // Handle base (red when off) - larger with black outline
-        tapOffGraphics.fillStyle(0x000000); // Black outline
-        tapOffGraphics.fillCircle(12, 8, 7);
-        tapOffGraphics.fillStyle(0xFF4500);
-        tapOffGraphics.fillCircle(12, 8, 5);
-        
-        // Handle lever (vertical when off - red) - thicker with black outline
-        tapOffGraphics.fillStyle(0x000000); // Black outline
-        tapOffGraphics.fillRect(9, 0, 6, 16);
-        tapOffGraphics.fillCircle(12, 0, 3);
-        tapOffGraphics.fillCircle(12, 16, 3);
-        
-        tapOffGraphics.fillStyle(0xDC143C);
-        tapOffGraphics.fillRect(10, 1, 4, 14);
-        tapOffGraphics.fillCircle(12, 1, 2);
-        tapOffGraphics.fillCircle(12, 15, 2);
+        tapBodyOffGraphics.fillStyle(0x000000);
+        tapBodyOffGraphics.fillCircle(18, 42, 3);
         
         // Metallic highlights
-        tapOffGraphics.fillStyle(0xC0C0C0);
-        tapOffGraphics.fillRect(5, 9, 2, 18);
-        tapOffGraphics.fillRect(9, 5, 2, 22);
+        tapBodyOffGraphics.fillStyle(0xC0C0C0);
+        tapBodyOffGraphics.fillRect(7.5, 13.5, 3, 27);
+        tapBodyOffGraphics.fillRect(13.5, 7.5, 3, 33);
         
-        tapOffGraphics.generateTexture('tap-off', 24, 32);
-        tapOffGraphics.destroy();
+        tapBodyOffGraphics.generateTexture('tap-body-off', 36, 48);
+        tapBodyOffGraphics.destroy();
+
+        // Create tap handle OFF state (red, vertical)
+        const tapHandleOffGraphics = this.add.graphics();
+        
+        // Handle base (red when off) - larger with black outline
+        tapHandleOffGraphics.fillStyle(0x000000); // Black outline
+        tapHandleOffGraphics.fillCircle(18, 12, 10.5);
+        tapHandleOffGraphics.fillStyle(0xFF4500);
+        tapHandleOffGraphics.fillCircle(18, 12, 7.5);
+        
+        // Handle lever (vertical when off - red) - thicker with black outline, moved higher
+        tapHandleOffGraphics.fillStyle(0x000000); // Black outline
+        tapHandleOffGraphics.fillRect(13.5, -6, 9, 24); // Moved up by 4 pixels (was 0, now -4)
+        tapHandleOffGraphics.fillCircle(18, -6, 4.5); // Moved up by 4 pixels (was 0, now -4)
+        tapHandleOffGraphics.fillCircle(18, 18, 4.5); // Moved up by 4 pixels (was 16, now 12)
+        
+        tapHandleOffGraphics.fillStyle(0xDC143C);
+        tapHandleOffGraphics.fillRect(15, -4.5, 6, 21); // Moved up by 4 pixels (was 1, now -3)
+        tapHandleOffGraphics.fillCircle(18, -4.5, 3); // Moved up by 4 pixels (was 1, now -3)
+        tapHandleOffGraphics.fillCircle(18, 16.5, 3); // Moved up by 4 pixels (was 15, now 11)
+        
+        tapHandleOffGraphics.generateTexture('tap-handle-off', 36, 48);
+        tapHandleOffGraphics.destroy();
     }
 
     initAudio() {
@@ -473,14 +528,24 @@ class GameScene extends Phaser.Scene {
     toggleMusic() {
         if (this.musicPlaying) {
             this.stopBackgroundMusic();
-            document.getElementById('music-toggle').textContent = '🔇 Music: OFF';
+            document.getElementById('music-toggle').textContent = '🔇 Music OFF';
         } else {
             // Restore music volume and restart
             if (this.musicGainNode) {
                 this.musicGainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
             }
             this.startBackgroundMusic();
-            document.getElementById('music-toggle').textContent = '🎵 Music: ON';
+            document.getElementById('music-toggle').textContent = '🎵 Music ON ';
+        }
+    }
+
+    toggleSounds() {
+        this.soundsEnabled = !this.soundsEnabled;
+        
+        if (this.soundsEnabled) {
+            document.getElementById('sound-toggle').textContent = '🔊 Sounds ON ';
+        } else {
+            document.getElementById('sound-toggle').textContent = '🔇 Sounds OFF';
         }
     }
 
@@ -541,8 +606,10 @@ class GameScene extends Phaser.Scene {
     }
 
     playSound(frequency, duration, type = 'sine', volume = 0.1) {
-        if (!this.audioContext) {
-            console.log('Audio context not available');
+        if (!this.audioContext || !this.soundsEnabled) {
+            if (!this.audioContext) {
+                console.log('Audio context not available');
+            }
             return;
         }
         
@@ -676,10 +743,13 @@ class GameScene extends Phaser.Scene {
         this.sprayArrow.setVisible(false); // Initially hidden
         this.sprayArrow.setDepth(10); // Ensure it appears above other sprites
 
-        // Create water tap in a corner
-        this.waterTap = this.physics.add.sprite(100, 100, 'tap-on');
-        this.waterTap.setImmovable(true);
-        this.waterTap.setData('isOn', true);
+        // Create water tap with layered graphics
+        this.waterTapBody = this.physics.add.sprite(100, 100, 'tap-body-on');
+        this.waterTapBody.setImmovable(true);
+        this.waterTapBody.setData('isOn', true);
+        
+        this.waterTapHandle = this.add.sprite(100, 100, 'tap-handle-on');
+        this.waterTapHandle.setDepth(this.waterTapBody.depth + 1); // Handle above body
 
         // Set up input
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -692,50 +762,695 @@ class GameScene extends Phaser.Scene {
         this.physics.add.overlap(this.waterSpray, this.raccoons, this.hitRaccoon, null, this);
         this.physics.add.overlap(this.squirrels, this.vegetables, this.squirrelGrabVegetable, null, this);
         this.physics.add.overlap(this.raccoons, this.vegetables, this.raccoonGrabVegetable, null, this);
-        this.physics.add.overlap(this.squirrels, this.waterTap, this.squirrelUseTap, null, this);
-        this.physics.add.overlap(this.gardener, this.waterTap, this.gardenerUseTap, null, this);
+        this.physics.add.overlap(this.squirrels, this.waterTapBody, this.squirrelUseTap, null, this);
+        this.physics.add.overlap(this.gardener, this.waterTapBody, this.gardenerUseTap, null, this);
 
         // Set up start game button
         document.getElementById('start-game-btn').addEventListener('click', () => {
             this.startGame();
         });
 
-        // Set up music toggle button
-        document.getElementById('music-toggle').addEventListener('click', () => {
+        // Set up music toggle button with touch support
+        const musicToggleBtn = document.getElementById('music-toggle');
+        musicToggleBtn.addEventListener('click', () => {
+            this.toggleMusic();
+        });
+        // Add touch event for better mobile support
+        musicToggleBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
             this.toggleMusic();
         });
 
-        // Set up quit game button
-        document.getElementById('quit-game-btn').addEventListener('click', () => {
-            this.quitGame();
+        // Set up sound toggle button with touch support
+        const soundToggleBtn = document.getElementById('sound-toggle');
+        soundToggleBtn.addEventListener('click', () => {
+            this.toggleSounds();
         });
+        // Add touch event for better mobile support
+        soundToggleBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            this.toggleSounds();
+        });
+
+        // Set up quit game button with touch support
+        const setupQuitButton = () => {
+            const quitGameBtn = document.getElementById('quit-game-btn');
+            console.log('Quit button element found:', !!quitGameBtn);
+            
+            if (quitGameBtn) {
+                // Store reference to game scene for use in event handlers
+                const gameScene = this;
+                
+                // Remove any existing listeners first
+                quitGameBtn.onclick = null;
+                
+                // Add multiple event types for maximum compatibility
+                quitGameBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    console.log('Quit button clicked via addEventListener');
+                    gameScene.quitGame();
+                });
+                
+                quitGameBtn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    console.log('Quit button touched via addEventListener');
+                    gameScene.quitGame();
+                });
+                
+                // Also add onclick as backup with proper context
+                quitGameBtn.onclick = (e) => {
+                    e.preventDefault();
+                    console.log('Quit button clicked via onclick');
+                    gameScene.quitGame();
+                };
+                
+                console.log('Quit button event listeners added with proper context');
+            } else {
+                console.error('Quit button not found!');
+                // Try again after a short delay
+                setTimeout(setupQuitButton, 100);
+            }
+        };
+        
+        setupQuitButton();
+
+        // Set up mobile controls
+        this.setupMobileControls();
 
         // Update UI (but don't start the game yet)
         this.updateUI();
     }
 
+    setupMobileControls() {
+        // Helper function for haptic feedback on supported devices
+        const hapticFeedback = () => {
+            if (navigator.vibrate) {
+                navigator.vibrate(10); // Short vibration
+            }
+        };
+        
+        // Handle orientation changes
+        const handleOrientationChange = () => {
+            this.isLandscape = window.innerWidth > window.innerHeight;
+            this.isPortrait = window.innerHeight > window.innerWidth;
+            // No longer showing rotation prompts - users can use any orientation
+        };
+        
+        // Listen for orientation changes
+        window.addEventListener('orientationchange', () => {
+            setTimeout(handleOrientationChange, 500); // Delay to allow orientation to settle
+        });
+        window.addEventListener('resize', handleOrientationChange);
+        
+        // Initial orientation check
+        handleOrientationChange();
+        
+        // Add fullscreen capabilities for mobile
+        this.setupFullscreenMobile();
+        
+        // Virtual Joystick Setup
+        this.setupVirtualJoystick();
+        
+        // Action buttons (spray and pause)
+        const sprayBtn = document.getElementById('spray-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+
+        if (sprayBtn) {
+            sprayBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                hapticFeedback();
+                if (!this.mobileControls.spray) {
+                    this.mobileControls.sprayJustPressed = true;
+                }
+                this.mobileControls.spray = true;
+                sprayBtn.classList.add('pressed');
+            });
+            sprayBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                this.mobileControls.spray = false;
+                sprayBtn.classList.remove('pressed');
+            });
+            sprayBtn.addEventListener('touchcancel', (e) => {
+                e.preventDefault();
+                this.mobileControls.spray = false;
+                sprayBtn.classList.remove('pressed');
+            });
+        }
+
+        if (pauseBtn) {
+            pauseBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                hapticFeedback();
+                pauseBtn.classList.add('pressed');
+            });
+            pauseBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                pauseBtn.classList.remove('pressed');
+                this.togglePause();
+            });
+            pauseBtn.addEventListener('touchcancel', (e) => {
+                e.preventDefault();
+                pauseBtn.classList.remove('pressed');
+            });
+            pauseBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.togglePause();
+            });
+        }
+    }
+
+    setupVirtualJoystick() {
+        const joystickBase = document.getElementById('joystick-base');
+        const joystickKnob = document.getElementById('joystick-knob');
+        
+        if (!joystickBase || !joystickKnob) return;
+        
+        this.joystick.base = joystickBase;
+        this.joystick.knob = joystickKnob;
+        
+        // Get the center position of the joystick base
+        const updateJoystickCenter = () => {
+            const baseRect = joystickBase.getBoundingClientRect();
+            this.joystick.centerX = baseRect.left + baseRect.width / 2;
+            this.joystick.centerY = baseRect.top + baseRect.height / 2;
+            this.joystick.maxDistance = Math.min(baseRect.width, baseRect.height) / 2 - 25; // Account for knob size
+        };
+        
+        // Update center on resize/orientation change
+        window.addEventListener('resize', updateJoystickCenter);
+        updateJoystickCenter();
+        
+        // Helper function to update joystick position and mobile controls
+        const updateJoystickPosition = (clientX, clientY) => {
+            const deltaX = clientX - this.joystick.centerX;
+            const deltaY = clientY - this.joystick.centerY;
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            
+            // Constrain to max distance
+            let constrainedX = deltaX;
+            let constrainedY = deltaY;
+            
+            if (distance > this.joystick.maxDistance) {
+                const ratio = this.joystick.maxDistance / distance;
+                constrainedX = deltaX * ratio;
+                constrainedY = deltaY * ratio;
+            }
+            
+            // Update knob position
+            this.joystick.knob.style.transform = `translate(-50%, -50%) translate(${constrainedX}px, ${constrainedY}px)`;
+            
+            // Add visual feedback for movement
+            if (distance > this.joystick.deadZone * this.joystick.maxDistance) {
+                if (!this.joystick.knob.classList.contains('moving')) {
+                    // Haptic feedback when starting movement
+                    if (navigator.vibrate) navigator.vibrate(5);
+                }
+                this.joystick.knob.classList.add('moving');
+                this.joystick.base.classList.add('active');
+            } else {
+                this.joystick.knob.classList.remove('moving');
+                this.joystick.base.classList.remove('active');
+            }
+            
+            // Calculate normalized values (-1 to 1)
+            this.joystick.normalizedX = constrainedX / this.joystick.maxDistance;
+            this.joystick.normalizedY = constrainedY / this.joystick.maxDistance; // Keep Y as screen coordinates
+            
+            // Update mobile controls based on joystick position with dead zone
+            const deadZone = this.joystick.deadZone;
+            
+            this.mobileControls.left = this.joystick.normalizedX < -deadZone;
+            this.mobileControls.right = this.joystick.normalizedX > deadZone;
+            this.mobileControls.up = this.joystick.normalizedY < -deadZone; // Moving joystick up = negative Y
+            this.mobileControls.down = this.joystick.normalizedY > deadZone; // Moving joystick down = positive Y
+            
+            // Store current position
+            this.joystick.currentX = constrainedX;
+            this.joystick.currentY = constrainedY;
+        };
+        
+        // Reset joystick to center
+        const resetJoystick = () => {
+            this.joystick.knob.style.transform = 'translate(-50%, -50%)';
+            this.joystick.normalizedX = 0;
+            this.joystick.normalizedY = 0;
+            this.joystick.currentX = 0;
+            this.joystick.currentY = 0;
+            this.joystick.isDragging = false;
+            
+            // Clear all movement controls
+            this.mobileControls.left = false;
+            this.mobileControls.right = false;
+            this.mobileControls.up = false;
+            this.mobileControls.down = false;
+            
+            // Remove visual feedback classes
+            this.joystick.knob.classList.remove('dragging', 'moving');
+            this.joystick.base.classList.remove('active');
+        };
+        
+        // Touch events for mobile
+        joystickBase.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (navigator.vibrate) navigator.vibrate(10);
+            
+            this.joystick.isDragging = true;
+            this.joystick.knob.classList.add('dragging');
+            
+            const touch = e.touches[0];
+            updateJoystickCenter(); // Update center position
+            updateJoystickPosition(touch.clientX, touch.clientY);
+        });
+        
+        document.addEventListener('touchmove', (e) => {
+            if (!this.joystick.isDragging) return;
+            e.preventDefault();
+            
+            const touch = e.touches[0];
+            updateJoystickPosition(touch.clientX, touch.clientY);
+        });
+        
+        document.addEventListener('touchend', (e) => {
+            if (!this.joystick.isDragging) return;
+            e.preventDefault();
+            resetJoystick();
+        });
+        
+        document.addEventListener('touchcancel', (e) => {
+            if (!this.joystick.isDragging) return;
+            e.preventDefault();
+            resetJoystick();
+        });
+        
+        // Mouse events for desktop testing
+        joystickBase.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            this.joystick.isDragging = true;
+            this.joystick.knob.classList.add('dragging');
+            
+            updateJoystickCenter(); // Update center position
+            updateJoystickPosition(e.clientX, e.clientY);
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!this.joystick.isDragging) return;
+            e.preventDefault();
+            updateJoystickPosition(e.clientX, e.clientY);
+        });
+        
+        document.addEventListener('mouseup', (e) => {
+            if (!this.joystick.isDragging) return;
+            e.preventDefault();
+            resetJoystick();
+        });
+        
+        // Prevent context menu on joystick
+        joystickBase.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+    }
+
+    setupFullscreenMobile() {
+        // Aggressive address bar hiding for mobile browsers
+        const hideAddressBar = () => {
+            if (this.isMobile) {
+                // Multiple scroll attempts to ensure address bar is hidden
+                const scrollToHide = () => {
+                    window.scrollTo(0, 1);
+                    setTimeout(() => window.scrollTo(0, 0), 50);
+                    setTimeout(() => window.scrollTo(0, 1), 100);
+                };
+                
+                scrollToHide();
+                setTimeout(scrollToHide, 100);
+                setTimeout(scrollToHide, 300);
+                setTimeout(scrollToHide, 500);
+                
+                // Aggressive viewport height calculation
+                const setViewportHeight = () => {
+                    // Get actual viewport dimensions
+                    const vh = window.innerHeight * 0.01;
+                    const vw = window.innerWidth * 0.01;
+                    
+                    // Set CSS custom properties
+                    document.documentElement.style.setProperty('--vh', `${vh}px`);
+                    document.documentElement.style.setProperty('--vw', `${vw}px`);
+                    document.documentElement.style.setProperty('--viewport-height', `${window.innerHeight}px`);
+                    document.documentElement.style.setProperty('--viewport-width', `${window.innerWidth}px`);
+                    
+                    // Force body height update
+                    document.body.style.height = `${window.innerHeight}px`;
+                    
+                    // Chrome on Android specific
+                    if (this.isAndroid) {
+                        // Account for navigation bar
+                        const actualHeight = window.screen?.height || window.innerHeight;
+                        const visibleHeight = window.innerHeight;
+                        const hasNavBar = actualHeight > visibleHeight;
+                        
+                        if (hasNavBar) {
+                            document.documentElement.style.setProperty('--android-nav-height', `${actualHeight - visibleHeight}px`);
+                        }
+                    }
+                    
+                    // iOS Safari specific
+                    if (this.isIOS) {
+                        // Handle iOS safe areas and notches
+                        const safeAreaTop = getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-top') || '0px';
+                        const safeAreaBottom = getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom') || '0px';
+                        
+                        document.documentElement.style.setProperty('--ios-safe-top', safeAreaTop);
+                        document.documentElement.style.setProperty('--ios-safe-bottom', safeAreaBottom);
+                    }
+                };
+                
+                setViewportHeight();
+                
+                // Multiple event listeners for different scenarios
+                window.addEventListener('resize', () => {
+                    setTimeout(setViewportHeight, 50);
+                    setTimeout(setViewportHeight, 200);
+                    setTimeout(scrollToHide, 100);
+                });
+                
+                window.addEventListener('orientationchange', () => {
+                    setTimeout(() => {
+                        setViewportHeight();
+                        scrollToHide();
+                    }, 200);
+                    setTimeout(() => {
+                        setViewportHeight();
+                        scrollToHide();
+                    }, 500);
+                    setTimeout(() => {
+                        setViewportHeight();
+                        scrollToHide();
+                    }, 1000);
+                });
+                
+                // Visual viewport API for better mobile support
+                if ('visualViewport' in window) {
+                    window.visualViewport.addEventListener('resize', () => {
+                        const viewport = window.visualViewport;
+                        document.documentElement.style.setProperty('--visual-viewport-height', `${viewport.height}px`);
+                        document.documentElement.style.setProperty('--visual-viewport-width', `${viewport.width}px`);
+                        setTimeout(scrollToHide, 50);
+                    });
+                }
+                
+                // Focus/blur events to handle keyboard/address bar changes
+                window.addEventListener('focus', () => {
+                    setTimeout(setViewportHeight, 100);
+                    setTimeout(scrollToHide, 150);
+                });
+                
+                window.addEventListener('blur', () => {
+                    setTimeout(setViewportHeight, 100);
+                });
+            }
+        };
+        
+        // Request fullscreen when game starts (if supported)
+        const requestFullscreen = () => {
+            const elem = document.documentElement;
+            
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen().catch(err => {
+                    console.log('Fullscreen request failed:', err);
+                });
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) {
+                elem.msRequestFullscreen();
+            } else if (elem.mozRequestFullScreen) {
+                elem.mozRequestFullScreen();
+            }
+        };
+        
+        // Enhanced Android support with aggressive fullscreen
+        const androidOptimizations = () => {
+            if (this.isAndroid) {
+                // Android-specific optimizations
+                document.addEventListener('touchstart', function() {}, { passive: true });
+                document.addEventListener('touchmove', function(e) {
+                    e.preventDefault();
+                }, { passive: false });
+                
+                // Prevent Android back button from closing the game
+                window.addEventListener('beforeunload', (e) => {
+                    if (this.gameStarted) {
+                        e.preventDefault();
+                        e.returnValue = '';
+                        return '';
+                    }
+                });
+                
+                // Android keyboard handling and chrome UI hiding
+                if ('visualViewport' in window) {
+                    window.visualViewport.addEventListener('resize', () => {
+                        const viewport = window.visualViewport;
+                        document.documentElement.style.setProperty('--viewport-height', `${viewport.height}px`);
+                        
+                        // Force chrome to hide UI when keyboard is hidden
+                        if (viewport.height > viewport.width * 0.6) {
+                            setTimeout(() => {
+                                window.scrollTo(0, 1);
+                                window.scrollTo(0, 0);
+                            }, 100);
+                        }
+                    });
+                }
+                
+                // Chrome Android specific meta theme manipulation
+                const chromeMetaTheme = document.querySelector('meta[name="theme-color"]');
+                if (chromeMetaTheme) {
+                    // Darker theme to encourage fullscreen mode
+                    chromeMetaTheme.setAttribute('content', '#000000');
+                }
+                
+                // Android Chrome immersive mode attempt
+                if ('screen' in window && 'orientation' in window.screen) {
+                    // Try to lock orientation to portrait and hide system UI
+                    const lockOrientation = () => {
+                        try {
+                            window.screen.orientation.lock('portrait-primary').catch(() => {
+                                console.log('Orientation lock not supported');
+                            });
+                        } catch (e) {
+                            console.log('Screen orientation API not supported');
+                        }
+                    };
+                    
+                    // Attempt orientation lock after user interaction
+                    document.addEventListener('touchstart', lockOrientation, { once: true });
+                    document.addEventListener('click', lockOrientation, { once: true });
+                }
+                
+                // Android system bar color (for devices that support it)
+                try {
+                    if ('setStatusBarStyle' in window) {
+                        window.setStatusBarStyle('dark-content');
+                    }
+                    if ('setNavigationBarColor' in window) {
+                        window.setNavigationBarColor('#000000');
+                    }
+                } catch (e) {
+                    // Ignore if not available
+                }
+            }
+        };
+        
+        // Add fullscreen button for mobile devices
+        if (this.isMobile) {
+            const fullscreenBtn = document.createElement('button');
+            fullscreenBtn.innerHTML = this.isAndroid ? '📱' : '⛶';
+            fullscreenBtn.id = 'fullscreen-btn';
+            fullscreenBtn.title = this.isAndroid ? 'Enter Fullscreen' : 'Enter Fullscreen';
+            fullscreenBtn.style.cssText = `
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                z-index: 1000;
+                background: rgba(74, 103, 65, 0.9);
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 8px;
+                font-size: 16px;
+                cursor: pointer;
+                display: none;
+            `;
+            
+            fullscreenBtn.addEventListener('click', () => {
+                if (!document.fullscreenElement) {
+                    requestFullscreen();
+                    if (this.isAndroid) {
+                        // Additional Android fullscreen handling
+                        setTimeout(() => {
+                            window.screen?.orientation?.lock?.('portrait-primary').catch(() => {
+                                console.log('Screen orientation lock not supported');
+                            });
+                        }, 100);
+                    }
+                    fullscreenBtn.style.display = 'none';
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    }
+                }
+            });
+            
+            document.body.appendChild(fullscreenBtn);
+            
+            // Show fullscreen button when game loads
+            document.addEventListener('DOMContentLoaded', () => {
+                if (this.isMobile) {
+                    setTimeout(() => {
+                        fullscreenBtn.style.display = 'block';
+                    }, 1000);
+                }
+            });
+        }
+        
+        // Handle PWA installation prompt with Android-specific messaging
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install button with platform-specific text
+            const installBtn = document.createElement('button');
+            installBtn.innerHTML = this.isAndroid ? '📱 Add to Home Screen' : '📱 Install App';
+            installBtn.id = 'install-btn';
+            installBtn.style.cssText = `
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                z-index: 1000;
+                background: rgba(65, 105, 225, 0.9);
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 8px 12px;
+                font-size: 12px;
+                cursor: pointer;
+            `;
+            
+            installBtn.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    console.log(`User response to install prompt: ${outcome}`);
+                    deferredPrompt = null;
+                    installBtn.remove();
+                }
+            });
+            
+            document.body.appendChild(installBtn);
+            
+            // Auto-hide after 10 seconds
+            setTimeout(() => {
+                if (installBtn.parentNode) {
+                    installBtn.remove();
+                }
+            }, 10000);
+        });
+        
+        // Initialize optimizations
+        androidOptimizations();
+        hideAddressBar();
+        
+        // Continuous address bar hiding on interaction
+        const continuousHide = () => {
+            setTimeout(() => {
+                window.scrollTo(0, 1);
+                setTimeout(() => window.scrollTo(0, 0), 50);
+            }, 100);
+        };
+        
+        // Multiple triggers for address bar hiding
+        document.addEventListener('click', continuousHide);
+        document.addEventListener('touchstart', continuousHide);
+        document.addEventListener('touchend', continuousHide);
+        document.addEventListener('keydown', continuousHide);
+        
+        // Game-specific triggers
+        this.input.on('pointerdown', continuousHide);
+        this.input.on('pointerup', continuousHide);
+        
+        // Periodic aggressive hiding (every 2 seconds when game is active)
+        if (this.isMobile) {
+            setInterval(() => {
+                if (this.gameStarted && !this.gamePaused) {
+                    window.scrollTo(0, 1);
+                    setTimeout(() => window.scrollTo(0, 0), 100);
+                }
+            }, 2000);
+        }
+    }
+
     startGame() {
         if (this.gameStarted) return; // Prevent multiple starts
         
+        console.log('Starting game...');
         this.gameStarted = true;
+        console.log('gameStarted set to:', this.gameStarted);
+        
+        // Check current button states to determine if music/sounds should be enabled
+        const musicButton = document.getElementById('music-toggle');
+        const soundButton = document.getElementById('sound-toggle');
+        
+        // Determine if music should be enabled based on button text
+        const musicShouldBeOn = musicButton.textContent.includes('ON');
+        
+        // Determine if sounds should be enabled based on button text
+        const soundsShouldBeOn = soundButton.textContent.includes('ON');
+        this.soundsEnabled = soundsShouldBeOn;
+        
+        // Update sound button text to ensure consistent formatting
+        if (this.soundsEnabled) {
+            soundButton.textContent = '🔊 Sounds ON ';
+        } else {
+            soundButton.textContent = '🔇 Sounds OFF';
+        }
         
         // Ensure audio context is properly initialized and resumed (required for modern browsers)
         if (this.audioContext) {
             if (this.audioContext.state === 'suspended') {
                 this.audioContext.resume().then(() => {
                     console.log('Audio context resumed');
-                    // Start background music after audio context is ready
-                    this.startBackgroundMusic();
+                    // Only start background music if button indicates it should be on
+                    if (musicShouldBeOn) {
+                        this.startBackgroundMusic();
+                        musicButton.textContent = '🎵 Music ON ';
+                    } else {
+                        this.musicPlaying = false;
+                        musicButton.textContent = '🔇 Music OFF';
+                    }
                 });
             } else {
-                console.log('Audio context already running, starting music');
-                this.startBackgroundMusic();
+                console.log('Audio context already running');
+                // Only start background music if button indicates it should be on
+                if (musicShouldBeOn) {
+                    this.startBackgroundMusic();
+                    musicButton.textContent = '🎵 Music ON ';
+                } else {
+                    this.musicPlaying = false;
+                    musicButton.textContent = '🔇 Music OFF';
+                }
             }
             console.log('Audio context state:', this.audioContext.state);
         } else {
             // Re-initialize audio if it wasn't created properly
             this.initAudio();
-            this.startBackgroundMusic();
+            // Only start background music if button indicates it should be on
+            if (musicShouldBeOn) {
+                this.startBackgroundMusic();
+                musicButton.textContent = '🎵 Music ON ';
+            } else {
+                this.musicPlaying = false;
+                musicButton.textContent = '🔇 Music OFF';
+            }
         }
         
         // Hide start screen and show game UI
@@ -747,13 +1462,11 @@ class GameScene extends Phaser.Scene {
         this.roundActive = true;
         this.gamePaused = false;
         
-        // Set up timer
-        this.gameTimer = this.time.addEvent({
-            delay: 1000,
-            callback: this.updateTimer,
-            callbackScope: this,
-            loop: true
-        });
+        // Timer is now handled manually in update() method
+        console.log('Using manual timer in update loop');
+        
+        // Immediately update UI to show starting time
+        this.updateUI();
         
         // Start the first round
         this.startRound();
@@ -767,10 +1480,26 @@ class GameScene extends Phaser.Scene {
     }
 
     startRound() {
+        console.log('Starting round', this.round);
         this.roundActive = true;
         this.timeLeft = 60;
+        this.lastTimerUpdate = 0; // Reset timer
+        console.log('roundActive set to:', this.roundActive, 'timeLeft set to:', this.timeLeft);
         this.squirrelSpawnRate = Math.max(1000, 3000 - (this.round - 1) * 200);
         this.raccoonSpawnRate = Math.max(4000, 8000 - (this.round - 1) * 300);
+        
+        // Calculate dynamic speeds based on round - slower in early rounds
+        const speedMultiplier = Math.min(1.0, 0.6 + (this.round - 1) * 0.08); // Start at 60% speed, increase 8% per round, cap at 100%
+        this.squirrelSeekSpeed = Math.floor(100 * speedMultiplier);
+        this.squirrelTapSpeed = Math.floor(120 * speedMultiplier);
+        this.squirrelCarrySpeed = Math.floor(80 * speedMultiplier);
+        this.squirrelFleeSpeed = Math.floor(150 * speedMultiplier);
+        this.raccoonSeekSpeed = Math.floor(80 * speedMultiplier);
+        this.raccoonCarrySpeed = Math.floor(80 * speedMultiplier);
+        this.raccoonFleeSpeed = Math.floor(150 * speedMultiplier);
+        
+        // Calculate tap chance - disabled in round 1, then increases each round
+        this.squirrelTapChance = this.round === 1 ? 0 : Math.min(0.002, 0.0005 + (this.round - 2) * 0.0003); // Start at 0% in round 1, 0.05% in round 2, increase 0.03% per round, cap at 0.2%
         
         // Clear existing objects
         this.vegetables.clear(true, true);
@@ -779,8 +1508,9 @@ class GameScene extends Phaser.Scene {
         
         // Reset water tap
         this.waterEnabled = true;
-        this.waterTap.setTexture('tap-on');
-        this.waterTap.setData('isOn', true);
+        this.waterTapBody.setTexture('tap-body-on');
+        this.waterTapHandle.setTexture('tap-handle-on');
+        this.waterTapBody.setData('isOn', true);
         
         // Create vegetables in center
         const vegetableTypes = ['carrot', 'tomato', 'lettuce'];
@@ -836,6 +1566,25 @@ class GameScene extends Phaser.Scene {
         // Don't update anything if game hasn't started
         if (!this.gameStarted) return;
         
+        // Manual timer handling (more reliable than Phaser timer events)
+        if (this.roundActive && !this.gamePaused) {
+            if (!this.lastTimerUpdate) {
+                this.lastTimerUpdate = time;
+            }
+            
+            if (time - this.lastTimerUpdate >= 1000) { // 1 second passed
+                this.timeLeft--;
+                this.updateUI();
+                this.lastTimerUpdate = time;
+                
+                console.log('Manual timer update - timeLeft:', this.timeLeft);
+                
+                if (this.timeLeft <= 0) {
+                    this.endRound();
+                }
+            }
+        }
+        
         // Handle pause toggle
         if (Phaser.Input.Keyboard.JustDown(this.pauseKey)) {
             this.togglePause();
@@ -882,83 +1631,182 @@ class GameScene extends Phaser.Scene {
             // Reset animation timer
             this.gardener.setData('animationTimer', 0);
             
+            // Reset mobile spray just pressed flag
+            this.mobileControls.sprayJustPressed = false;
+            
             return;
         }
 
-        // Gardener movement (directional with arrow keys)
+        // Gardener movement (directional with arrow keys or mobile controls)
         this.gardener.setVelocity(0);
         let isMoving = false;
         
+        // Combine keyboard and mobile controls
+        const leftPressed = this.cursors.left.isDown || this.mobileControls.left;
+        const rightPressed = this.cursors.right.isDown || this.mobileControls.right;
+        const upPressed = this.cursors.up.isDown || this.mobileControls.up;
+        const downPressed = this.cursors.down.isDown || this.mobileControls.down;
+        const sprayPressed = this.spaceKey.isDown || this.mobileControls.spray;
+        
+        // Get joystick analog values for smooth movement (only if joystick is being used)
+        const joystickX = this.joystick && Math.abs(this.joystick.normalizedX) > this.joystick.deadZone ? this.joystick.normalizedX : 0;
+        const joystickY = this.joystick && Math.abs(this.joystick.normalizedY) > this.joystick.deadZone ? this.joystick.normalizedY : 0;
+        const isUsingJoystick = Math.abs(joystickX) > 0 || Math.abs(joystickY) > 0;
+        
         // Check if player is currently spraying water
-        const isSpraying = this.spaceKey.isDown;
+        const isSpraying = sprayPressed;
+        
+        // Track when spraying starts to determine initial facing direction
+        if (isSpraying && !this.wasSpraying) {
+            // Store the initial facing direction when spraying starts
+            this.initialFacingDown = this.gardenerAngle >= 45 && this.gardenerAngle <= 135;
+        }
+        this.wasSpraying = isSpraying;
         
         // Update spray indicator visibility and position
         this.sprayArrow.setPosition(this.gardener.x, this.gardener.y);
         this.sprayArrow.setVisible(isSpraying);
         
         if (isSpraying) {
-            // When spraying, left/right arrows rotate spray direction
-            if (this.cursors.left.isDown) {
-                this.gardenerAngle -= 3; // degrees per frame
-                this.sprayArrow.setRotation(Phaser.Math.DegToRad(this.gardenerAngle));
-            } else if (this.cursors.right.isDown) {
-                this.gardenerAngle += 3; // degrees per frame
-                this.sprayArrow.setRotation(Phaser.Math.DegToRad(this.gardenerAngle));
-            }
-            
-            // Up/down still move forward/backward when spraying
-            if (this.cursors.up.isDown) {
-                const velocityX = Math.cos(Phaser.Math.DegToRad(this.gardenerAngle)) * 150;
-                const velocityY = Math.sin(Phaser.Math.DegToRad(this.gardenerAngle)) * 150;
-                this.gardener.setVelocity(velocityX, velocityY);
-                isMoving = true;
-            } else if (this.cursors.down.isDown) {
-                const velocityX = Math.cos(Phaser.Math.DegToRad(this.gardenerAngle)) * -120;
-                const velocityY = Math.sin(Phaser.Math.DegToRad(this.gardenerAngle)) * -120;
-                this.gardener.setVelocity(velocityX, velocityY);
-                isMoving = true;
+            // When spraying with joystick, spray direction follows joystick direction directly
+            if (isUsingJoystick) {
+                // Calculate spray angle directly from joystick position
+                if (Math.abs(joystickX) > 0.1 || Math.abs(joystickY) > 0.1) {
+                    // Use atan2 to get the angle from joystick direction
+                    this.gardenerAngle = Phaser.Math.RadToDeg(Math.atan2(joystickY, joystickX));
+                    this.sprayArrow.setRotation(Phaser.Math.DegToRad(this.gardenerAngle));
+                    
+                    // Also move the character in the joystick direction while spraying
+                    const moveSpeed = 100; // Slower movement while spraying
+                    const velocityX = joystickX * moveSpeed;
+                    const velocityY = joystickY * moveSpeed;
+                    this.gardener.setVelocity(velocityX, velocityY);
+                    isMoving = true;
+                }
+            } else {
+                // Discrete button controls (original behavior for keyboard/d-pad)
+                // Use the initial facing direction to determine rotation behavior
+                const shouldReverseControls = this.initialFacingDown;
+                
+                if (leftPressed) {
+                    if (shouldReverseControls) {
+                        this.gardenerAngle += 2; // Clockwise when initially facing down
+                    } else {
+                        this.gardenerAngle -= 2; // Counter-clockwise otherwise
+                    }
+                    this.sprayArrow.setRotation(Phaser.Math.DegToRad(this.gardenerAngle));
+                } else if (rightPressed) {
+                    if (shouldReverseControls) {
+                        this.gardenerAngle -= 2; // Counter-clockwise when initially facing down
+                    } else {
+                        this.gardenerAngle += 2; // Clockwise otherwise
+                    }
+                    this.sprayArrow.setRotation(Phaser.Math.DegToRad(this.gardenerAngle));
+                }
+                
+                // Up/down move forward/backward when spraying with discrete controls
+                if (upPressed) {
+                    const velocityX = Math.cos(Phaser.Math.DegToRad(this.gardenerAngle)) * 150;
+                    const velocityY = Math.sin(Phaser.Math.DegToRad(this.gardenerAngle)) * 150;
+                    this.gardener.setVelocity(velocityX, velocityY);
+                    isMoving = true;
+                } else if (downPressed) {
+                    const velocityX = Math.cos(Phaser.Math.DegToRad(this.gardenerAngle)) * -120;
+                    const velocityY = Math.sin(Phaser.Math.DegToRad(this.gardenerAngle)) * -120;
+                    this.gardener.setVelocity(velocityX, velocityY);
+                    isMoving = true;
+                }
             }
         } else {
-            // When not spraying, arrows move in their respective directions
+            // When not spraying, use joystick for smooth movement or arrows for discrete movement
             let velocityX = 0;
             let velocityY = 0;
             
-            if (this.cursors.left.isDown) {
-                velocityX = -200;
-                this.gardenerAngle = 180; // Face left for spray direction
-                isMoving = true;
-            } else if (this.cursors.right.isDown) {
-                velocityX = 200;
-                this.gardenerAngle = 0; // Face right for spray direction
-                isMoving = true;
-            }
-            
-            if (this.cursors.up.isDown) {
-                velocityY = -200;
-                this.gardenerAngle = -90; // Face up for spray direction
-                isMoving = true;
-            } else if (this.cursors.down.isDown) {
-                velocityY = 200;
-                this.gardenerAngle = 90; // Face down for spray direction
-                isMoving = true;
-            }
-            
-            // Handle diagonal movement
-            if ((this.cursors.left.isDown || this.cursors.right.isDown) && 
-                (this.cursors.up.isDown || this.cursors.down.isDown)) {
-                // Reduce velocity for diagonal movement to maintain consistent speed
-                velocityX *= 0.707; // 1/√2
-                velocityY *= 0.707;
+            if (isUsingJoystick) {
+                // Smooth analog movement with joystick
+                const maxSpeed = 200;
+                velocityX = joystickX * maxSpeed;
+                velocityY = joystickY * maxSpeed;
                 
-                // Set angle for diagonal directions
-                if (this.cursors.left.isDown && this.cursors.up.isDown) {
-                    this.gardenerAngle = -135; // Up-left
-                } else if (this.cursors.right.isDown && this.cursors.up.isDown) {
-                    this.gardenerAngle = -45; // Up-right
-                } else if (this.cursors.left.isDown && this.cursors.down.isDown) {
-                    this.gardenerAngle = 135; // Down-left
-                } else if (this.cursors.right.isDown && this.cursors.down.isDown) {
-                    this.gardenerAngle = 45; // Down-right
+                // Update gardener angle based on movement direction for spray direction
+                if (Math.abs(joystickX) > 0.1 || Math.abs(joystickY) > 0.1) {
+                    this.gardenerAngle = Phaser.Math.RadToDeg(Math.atan2(joystickY, joystickX));
+                    isMoving = true;
+                }
+                
+                // Reset movement tracking for discrete controls
+                this.wasMovingLeft = false;
+                this.wasMovingRight = false;
+                this.wasMovingUp = false;
+                this.wasMovingDown = false;
+            } else {
+                // Discrete movement with arrow keys/buttons (original behavior)
+                // Only update gardener angle if we're starting a new movement (not if already moving in that direction)
+                // This preserves the spray rotation angle when transitioning from spraying to movement
+                if (leftPressed) {
+                    velocityX = -200;
+                    // Only set angle if we weren't already moving left or if this is a fresh movement
+                    if (!this.wasMovingLeft) {
+                        this.gardenerAngle = 180; // Face left for spray direction
+                    }
+                    this.wasMovingLeft = true;
+                    isMoving = true;
+                } else {
+                    this.wasMovingLeft = false;
+                }
+                
+                if (rightPressed) {
+                    velocityX = 200;
+                    // Only set angle if we weren't already moving right or if this is a fresh movement
+                    if (!this.wasMovingRight) {
+                        this.gardenerAngle = 0; // Face right for spray direction
+                    }
+                    this.wasMovingRight = true;
+                    isMoving = true;
+                } else {
+                    this.wasMovingRight = false;
+                }
+                
+                if (upPressed) {
+                    velocityY = -200;
+                    // Only set angle if we weren't already moving up or if this is a fresh movement
+                    if (!this.wasMovingUp) {
+                        this.gardenerAngle = -90; // Face up for spray direction
+                    }
+                    this.wasMovingUp = true;
+                    isMoving = true;
+                } else {
+                    this.wasMovingUp = false;
+                }
+                
+                if (downPressed) {
+                    velocityY = 200;
+                    // Only set angle if we weren't already moving down or if this is a fresh movement
+                    if (!this.wasMovingDown) {
+                        this.gardenerAngle = 90; // Face down for spray direction
+                    }
+                    this.wasMovingDown = true;
+                    isMoving = true;
+                } else {
+                    this.wasMovingDown = false;
+                }
+                
+                // Handle diagonal movement for discrete controls
+                if ((leftPressed || rightPressed) && (upPressed || downPressed)) {
+                    // Reduce velocity for diagonal movement to maintain consistent speed
+                    velocityX *= 0.707; // 1/√2
+                    velocityY *= 0.707;
+                    
+                    // Set angle for diagonal directions
+                    if (leftPressed && upPressed) {
+                        this.gardenerAngle = -135; // Up-left
+                    } else if (rightPressed && upPressed) {
+                        this.gardenerAngle = -45; // Up-right
+                    } else if (leftPressed && downPressed) {
+                        this.gardenerAngle = 135; // Down-left
+                    } else if (rightPressed && downPressed) {
+                        this.gardenerAngle = 45; // Down-right
+                    }
                 }
             }
             
@@ -1078,8 +1926,9 @@ class GameScene extends Phaser.Scene {
             }
         }
         
-        // Continuous water spray while holding spacebar
-        if (this.spaceKey.isDown && this.waterEnabled) {
+        // Continuous water spray while holding spacebar/spray button
+        const sprayHeld = this.spaceKey.isDown || this.mobileControls.spray;
+        if (sprayHeld && this.waterEnabled) {
             // Add a small delay between spray bursts for performance
             if (!this.lastSprayTime || time - this.lastSprayTime > 150) {
                 this.sprayWater();
@@ -1093,8 +1942,8 @@ class GameScene extends Phaser.Scene {
             this.lastSquirrelSpawn = time;
         }
 
-        // Spawn raccoons (less frequently)
-        if (time - this.lastRaccoonSpawn > this.raccoonSpawnRate) {
+        // Spawn raccoons (less frequently and not in first round)
+        if (this.round > 1 && time - this.lastRaccoonSpawn > this.raccoonSpawnRate) {
             this.spawnRaccoon();
             this.lastRaccoonSpawn = time;
         }
@@ -1113,6 +1962,9 @@ class GameScene extends Phaser.Scene {
         if (this.vegetablesLeft <= 0 || this.timeLeft <= 0) {
             this.endRound();
         }
+        
+        // Reset mobile spray just pressed flag at end of frame
+        this.mobileControls.sprayJustPressed = false;
     }
 
     sprayWater() {
@@ -1226,8 +2078,8 @@ class GameScene extends Phaser.Scene {
             squirrel.setData('tapCooldown', tapCooldown - 1);
         }
         
-        // Random chance for squirrel to go to tap if it's on and not in cooldown
-        if (state === 'seeking' && this.waterEnabled && tapCooldown <= 0 && Math.random() < 0.002) {
+        // Random chance for squirrel to go to tap if it's on and not in cooldown (scaled by round)
+        if (state === 'seeking' && this.waterEnabled && tapCooldown <= 0 && Math.random() < this.squirrelTapChance) {
             squirrel.setData('state', 'goingToTap');
             squirrel.setData('tapCooldown', 300); // 5 second cooldown
         }
@@ -1251,25 +2103,26 @@ class GameScene extends Phaser.Scene {
 
             if (nearestVegetable) {
                 squirrel.setData('targetVegetable', nearestVegetable);
-                this.physics.moveToObject(squirrel, nearestVegetable, 100);
+                this.physics.moveToObject(squirrel, nearestVegetable, this.squirrelSeekSpeed);
                 isMoving = true;
             }
         } else if (state === 'goingToTap') {
             // Move towards water tap
-            this.physics.moveToObject(squirrel, this.waterTap, 120);
+            this.physics.moveToObject(squirrel, this.waterTapBody, this.squirrelTapSpeed);
             isMoving = true;
             
             // Check if close enough to tap
             const distance = Phaser.Math.Distance.Between(
-                squirrel.x, squirrel.y, this.waterTap.x, this.waterTap.y
+                squirrel.x, squirrel.y, this.waterTapBody.x, this.waterTapBody.y
             );
             
             if (distance < 30) {
-                if (this.waterTap.getData('isOn')) {
+                if (this.waterTapBody.getData('isOn')) {
                     // Turn off the tap
                     this.waterEnabled = false;
-                    this.waterTap.setTexture('tap-off');
-                    this.waterTap.setData('isOn', false);
+                    this.waterTapBody.setTexture('tap-body-off');
+                    this.waterTapHandle.setTexture('tap-handle-off');
+                    this.waterTapBody.setData('isOn', false);
                     
                     // Squirrel runs away after turning off tap
                     squirrel.setData('state', 'fleeing');
@@ -1285,7 +2138,7 @@ class GameScene extends Phaser.Scene {
             }
             
             // Also check if tap was turned off while squirrel was approaching
-            if (!this.waterEnabled || !this.waterTap.getData('isOn')) {
+            if (!this.waterEnabled || !this.waterTapBody.getData('isOn')) {
                 // Water is no longer available, give up and go back to seeking
                 squirrel.setData('state', 'seeking');
                 squirrel.setData('targetVegetable', null);
@@ -1298,7 +2151,7 @@ class GameScene extends Phaser.Scene {
             const length = Math.sqrt(dirX * dirX + dirY * dirY);
             
             if (length > 0) {
-                squirrel.setVelocity((dirX / length) * 80, (dirY / length) * 80);
+                squirrel.setVelocity((dirX / length) * this.squirrelCarrySpeed, (dirY / length) * this.squirrelCarrySpeed);
                 isMoving = true;
             }
 
@@ -1321,7 +2174,7 @@ class GameScene extends Phaser.Scene {
             const length = Math.sqrt(dirX * dirX + dirY * dirY);
             
             if (length > 0) {
-                squirrel.setVelocity((dirX / length) * 150, (dirY / length) * 150);
+                squirrel.setVelocity((dirX / length) * this.squirrelFleeSpeed, (dirY / length) * this.squirrelFleeSpeed);
                 isMoving = true;
             }
 
@@ -1378,7 +2231,7 @@ class GameScene extends Phaser.Scene {
 
                 if (nearestVegetable) {
                     raccoon.setData('targetVegetable', nearestVegetable);
-                    this.physics.moveToObject(raccoon, nearestVegetable, 80);
+                    this.physics.moveToObject(raccoon, nearestVegetable, this.raccoonSeekSpeed);
                     isMoving = true;
                 } else if (carriedVegetables.length > 0) {
                     // No more vegetables to find, but we have some - start carrying them away
@@ -1404,7 +2257,7 @@ class GameScene extends Phaser.Scene {
             const length = Math.sqrt(dirX * dirX + dirY * dirY);
             
             if (length > 0) {
-                raccoon.setVelocity((dirX / length) * 80, (dirY / length) * 80);
+                raccoon.setVelocity((dirX / length) * this.raccoonCarrySpeed, (dirY / length) * this.raccoonCarrySpeed);
                 isMoving = true;
             }
 
@@ -1430,7 +2283,7 @@ class GameScene extends Phaser.Scene {
             const length = Math.sqrt(dirX * dirX + dirY * dirY);
             
             if (length > 0) {
-                raccoon.setVelocity((dirX / length) * 150, (dirY / length) * 150);
+                raccoon.setVelocity((dirX / length) * this.raccoonFleeSpeed, (dirY / length) * this.raccoonFleeSpeed);
                 isMoving = true;
             }
 
@@ -1457,7 +2310,8 @@ class GameScene extends Phaser.Scene {
         // Only turn off tap if it's currently on and squirrel is in the right state
         if (squirrel.getData('state') === 'goingToTap' && tap.getData('isOn')) {
             this.waterEnabled = false;
-            tap.setTexture('tap-off');
+            this.waterTapBody.setTexture('tap-body-off');
+            this.waterTapHandle.setTexture('tap-handle-off');
             tap.setData('isOn', false);
             
             // Squirrel runs away after turning off tap
@@ -1470,10 +2324,14 @@ class GameScene extends Phaser.Scene {
     }
 
     gardenerUseTap(gardener, tap) {
-        // Only allow turning on tap if it's off and player presses spacebar
-        if (!tap.getData('isOn') && Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
+        // Check for both keyboard and mobile spray input
+        const sprayJustPressed = Phaser.Input.Keyboard.JustDown(this.spaceKey) || this.mobileControls.sprayJustPressed;
+        
+        // Only allow turning on tap if it's off and player presses spacebar/spray button
+        if (!tap.getData('isOn') && sprayJustPressed) {
             this.waterEnabled = true;
-            tap.setTexture('tap-on');
+            this.waterTapBody.setTexture('tap-body-on');
+            this.waterTapHandle.setTexture('tap-handle-on');
             tap.setData('isOn', true);
             
             // Play tap sound
@@ -1484,11 +2342,12 @@ class GameScene extends Phaser.Scene {
     checkGardenerTapInteraction() {
         // Check if gardener is close enough to tap
         const distance = Phaser.Math.Distance.Between(
-            this.gardener.x, this.gardener.y, this.waterTap.x, this.waterTap.y
+            this.gardener.x, this.gardener.y, this.waterTapBody.x, this.waterTapBody.y
         );
         
-        // If close to tap and tap is off and spacebar pressed
-        if (distance < 40 && !this.waterTap.getData('isOn') && Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
+        // If close to tap and tap is off and spacebar/spray button pressed
+        const sprayJustPressed = Phaser.Input.Keyboard.JustDown(this.spaceKey) || this.mobileControls.sprayJustPressed;
+        if (distance < 40 && !this.waterTap.getData('isOn') && sprayJustPressed) {
             this.waterEnabled = true;
             this.waterTap.setTexture('tap-on');
             this.waterTap.setData('isOn', true);
@@ -1610,7 +2469,10 @@ class GameScene extends Phaser.Scene {
     }
 
     quitGame() {
-        if (!this.gameStarted) return; // Can't quit if game hasn't started
+        console.log('quitGame called, gameStarted:', this.gameStarted);
+        
+        // Always allow quitting, regardless of game state
+        console.log('Quitting game...');
         
         // Reset game state
         this.gameStarted = false;
@@ -1619,6 +2481,7 @@ class GameScene extends Phaser.Scene {
         this.score = 0;
         this.round = 1;
         this.timeLeft = 60;
+        this.lastTimerUpdate = 0; // Reset manual timer
         this.vegetablesLeft = 0; // Reset vegetables count
         
         // Stop the game timer
@@ -1665,14 +2528,14 @@ class GameScene extends Phaser.Scene {
         
         // Reset water tap
         this.waterEnabled = true;
-        this.waterTap.setTexture('tap-on');
-        this.waterTap.setData('isOn', true);
+        this.waterTapBody.setTexture('tap-body-on');
+        this.waterTapHandle.setTexture('tap-handle-on');
+        this.waterTapBody.setData('isOn', true);
         
-        // Stop background music
+        // Stop background music (but don't change button state)
         this.stopBackgroundMusic();
         
-        // Reset music toggle button text
-        document.getElementById('music-toggle').textContent = '🎵 Music: ON';
+        // Don't reset button states - preserve user preferences
         
         // Resume physics if paused
         if (this.physics.world.isPaused) {
@@ -1680,10 +2543,13 @@ class GameScene extends Phaser.Scene {
         }
         
         // Show start screen and hide game UI
+        console.log('Removing game-started class');
         document.body.classList.remove('game-started');
+        console.log('Class removed, body classes:', document.body.className);
         
         // Reset UI
         this.updateUI();
+        console.log('UI updated after quit');
         
         // Play quit sound
         this.playSound(400, 0.2, 'triangle', 0.2);
@@ -1692,9 +2558,16 @@ class GameScene extends Phaser.Scene {
     }
 
     updateTimer() {
+        console.log('Timer called - gameStarted:', this.gameStarted, 'roundActive:', this.roundActive, 'gamePaused:', this.gamePaused);
         if (this.gameStarted && this.roundActive && !this.gamePaused) {
             this.timeLeft--;
+            console.log('Timer decremented to:', this.timeLeft);
             this.updateUI();
+            
+            // Check if time has run out
+            if (this.timeLeft <= 0) {
+                this.endRound();
+            }
         }
     }
 
@@ -1737,10 +2610,32 @@ class GameScene extends Phaser.Scene {
         // Update pause status
         const pauseStatus = document.getElementById('pause-status');
         if (this.gamePaused) {
-            pauseStatus.textContent = '⏸️ PAUSED - Press P to Resume';
+            pauseStatus.textContent = '⏸️ PAUSED';
             pauseStatus.classList.add('visible');
         } else {
             pauseStatus.classList.remove('visible');
+        }
+    }
+
+    updateMobileControlStyling(isSpraying) {
+        // Update virtual joystick styling to indicate spray mode
+        const joystickBase = document.getElementById('joystick-base');
+        const joystickKnob = document.getElementById('joystick-knob');
+        
+        if (joystickBase && joystickKnob) {
+            if (isSpraying) {
+                // Add spray styling to joystick when spraying
+                if (!joystickBase.classList.contains('spraying')) {
+                    // Haptic feedback when entering spray mode
+                    if (navigator.vibrate) navigator.vibrate([15, 10, 15]);
+                }
+                joystickBase.classList.add('spraying');
+                joystickKnob.classList.add('spraying');
+            } else {
+                // Remove spray styling when not spraying
+                joystickBase.classList.remove('spraying');
+                joystickKnob.classList.remove('spraying');
+            }
         }
     }
 }
@@ -1750,6 +2645,15 @@ const config = {
     width: 800,
     height: 600,
     parent: 'game',
+    scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: 800,
+        height: 600,
+        // Better mobile handling
+        fullscreenTarget: 'game',
+        expandParent: false
+    },
     physics: {
         default: 'arcade',
         arcade: {

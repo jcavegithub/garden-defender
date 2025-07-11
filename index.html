@@ -2,34 +2,222 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no" />
+  <!-- iOS PWA and fullscreen support -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Garden Defender" />
+  <!-- Android PWA and fullscreen support -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#2d4a2b" />
+  <!-- Orientation and fullscreen - prefer portrait -->
+  <meta name="screen-orientation" content="portrait-primary" />
+  <meta name="orientation" content="portrait-primary" />
+  <!-- Disable browser features that interfere with games -->
+  <meta name="format-detection" content="telephone=no" />
+  <meta name="msapplication-tap-highlight" content="no" />
+  <meta name="msapplication-TileColor" content="#2d4a2b" />
+  <meta name="application-name" content="Garden Defender" />
+  <!-- Chrome on Android aggressive fullscreen -->
+  <meta name="mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="google" content="notranslate" />
+  <!-- Additional mobile optimizations -->
+  <meta name="HandheldFriendly" content="true" />
+  <meta name="MobileOptimized" content="width" />
+  <meta name="apple-touch-fullscreen" content="yes" />
+  <!-- Prevent iOS elastic scrolling -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <!-- Android Chrome immersive mode hints -->
+  <meta name="display-mode" content="fullscreen" />
+  <meta name="android-app-immersive" content="true" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icon.svg" />
+  <link rel="icon" type="image/svg+xml" href="/icon.svg" />
   <title>Garden Defender</title>
+  <!-- Immediate mobile viewport and fullscreen script -->
+  <script>
+    // Immediate mobile detection and viewport setup
+    (function() {
+      const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      
+      if (isMobile) {
+        // Immediate viewport height calculation
+        function setImmediateViewport() {
+          const vh = window.innerHeight * 0.01;
+          const vw = window.innerWidth * 0.01;
+          
+          document.documentElement.style.setProperty('--vh', vh + 'px');
+          document.documentElement.style.setProperty('--vw', vw + 'px');
+          document.documentElement.style.setProperty('--viewport-height', window.innerHeight + 'px');
+          document.documentElement.style.setProperty('--viewport-width', window.innerWidth + 'px');
+          
+          // Force body height immediately
+          document.documentElement.style.height = window.innerHeight + 'px';
+          if (document.body) {
+            document.body.style.height = window.innerHeight + 'px';
+          }
+        }
+        
+        // Immediate address bar hiding
+        function hideAddressBarImmediate() {
+          setTimeout(() => {
+            window.scrollTo(0, 1);
+            setTimeout(() => window.scrollTo(0, 0), 50);
+            setTimeout(() => window.scrollTo(0, 1), 100);
+          }, 10);
+        }
+        
+        // Run immediately
+        setImmediateViewport();
+        hideAddressBarImmediate();
+        
+        // Set up listeners for early execution
+        window.addEventListener('resize', setImmediateViewport);
+        window.addEventListener('orientationchange', () => {
+          setTimeout(setImmediateViewport, 100);
+          setTimeout(hideAddressBarImmediate, 200);
+        });
+        
+        // Visual viewport API support
+        if ('visualViewport' in window) {
+          window.visualViewport.addEventListener('resize', () => {
+            const viewport = window.visualViewport;
+            document.documentElement.style.setProperty('--visual-viewport-height', viewport.height + 'px');
+            document.documentElement.style.setProperty('--visual-viewport-width', viewport.width + 'px');
+          });
+        }
+        
+        // Android specific immediate optimizations
+        if (isAndroid) {
+          // Hide chrome UI on Android
+          const metaTheme = document.querySelector('meta[name="theme-color"]');
+          if (metaTheme) {
+            metaTheme.setAttribute('content', '#000000');
+          }
+          
+          // Prevent Android system UI from showing
+          document.addEventListener('touchstart', hideAddressBarImmediate, { passive: true });
+          document.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+          }, { passive: false });
+        }
+        
+        // iOS specific immediate optimizations
+        if (isIOS) {
+          // iOS Safari address bar hiding
+          document.addEventListener('touchstart', hideAddressBarImmediate, { passive: true });
+          
+          // Prevent iOS elastic scrolling
+          document.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+          }, { passive: false });
+        }
+      }
+    })();
+  </script>
+  <style>
+    /* Prevent zoom on iOS */
+    body {
+      touch-action: manipulation;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    /* Prevent highlighting on touch */
+    * {
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* Fullscreen mobile web app styles */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      position: fixed;
+      background-color: #2d4a2b;
+    }
+    /* Handle iOS safe areas and notches */
+    body {
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      box-sizing: border-box;
+    }
+    /* Address bar hiding for mobile browsers */
+    #game-container {
+      height: 100vh;
+      height: 100dvh; /* Dynamic viewport height for better mobile support */
+    }
+  </style>
 </head>
 <body>
   <div id="game-container">
     <h1 id="game-title">🌱 Garden Defender 🦝</h1>
-    <div id="start-screen">
-      <div id="start-content">
-        <h2>Defend Your Garden!</h2>
-        <p>🐿️ Squirrels will steal your vegetables one at a time</p>
-        <p>🦝 Raccoons can carry TWO vegetables at once!</p>
-        <p>💧 Use your water spray to stop them</p>
-        <p>🚰 Turn on the water tap if enemies turn it off</p>
-        <button id="start-game-btn">🎮 Start New Game</button>
+    
+    <!-- Main game layout with centered canvas and side panels -->
+    <div id="game-layout">
+      <!-- Left side panel -->
+      <div id="left-panel" class="side-panel">
+        <div id="game-stats">
+          <div id="score">Score: 0</div>
+          <div id="round">Round: 1</div>
+          <div id="timer">Time: 60</div>
+          <div id="vegetables-left">Vegetables: 0</div>
+        </div>
+        <!-- Dedicated pause notification container -->
+        <div id="pause-notification">
+          <div id="pause-status"></div>
+        </div>
+        <div id="instructions">
+          <p class="desktop-only">🎮 Arrow keys: move<br>🚿 SPACE + L/R: spray/tap<br>⏸️ P: pause<br>🚪 ESC: quit</p>
+          <p class="mobile-only">🎮 Optimized for portrait mode<br>🚿 Use touch controls<br>🚰 Near tap + spray = turn on</p>
+        </div>
       </div>
-    </div>
-    <div id="game"></div>
-    <div id="ui">
-      <div id="score">Score: 0</div>
-      <div id="round">Round: 1</div>
-      <div id="timer">Time: 60</div>
-      <div id="vegetables-left">Vegetables: 0</div>
-      <div id="pause-status"></div>
-      <button id="music-toggle">🎵 Music: ON</button>
-      <button id="quit-game-btn">🚪 Quit Game</button>
-    </div>
-    <div id="instructions">
-      <p>🎮 Use arrow keys to move, SPACE + L/R arrow to spray water/turn on tap, P to pause, ESC to quit</p>
+      
+      <!-- Center game area -->
+      <div id="game-center">
+        <div id="start-screen">
+          <div id="start-content">
+            <h2>Defend Your Garden!</h2>
+            <p>🐿️ Squirrels will steal your vegetables one at a time</p>
+            <p>🦝 Raccoons can carry TWO vegetables at once!</p>
+            <p>💧 Use your water spray to stop them</p>
+            <p>🚰 Turn on the water tap if enemies turn it off</p>
+            <p class="mobile-only">📱 Hold device in portrait for best mobile experience</p>
+            <button id="start-game-btn">🎮 Start New Game</button>
+          </div>
+        </div>
+        <div id="game"></div>
+      </div>
+      
+      <!-- Right side panel -->
+      <div id="right-panel" class="side-panel">
+        <div id="game-controls">
+          <button id="music-toggle">🎵 Music ON </button>
+          <button id="sound-toggle">🔊 Sounds ON </button>
+          <button id="quit-game-btn">🚪 Quit Game</button>
+        </div>
+      </div>
+      
+      <!-- Mobile Touch Controls (part of layout flow) -->
+      <div id="mobile-controls" class="side-panel">
+        <div id="virtual-joystick">
+          <div id="joystick-base">
+            <div id="joystick-knob"></div>
+          </div>
+        </div>
+        <div id="action-buttons">
+          <button id="spray-btn" class="action-btn">
+            <div class="spray-top">💧 SPRAY</div>
+            <hr class="spray-divider">
+            <div class="spray-bottom"><span class="tap-icon">🚰</span> TAP ON</div>
+          </button>
+          <button id="pause-btn" class="action-btn">⏸️</button>
+        </div>
+      </div>
     </div>
   </div>
   <script type="module" src="/src/main.js"></script>

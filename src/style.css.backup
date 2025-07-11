@@ -384,13 +384,6 @@ canvas {
   display: flex;
 }
 
-/* Hide instructions on mobile devices */
-@media (max-width: 900px) {
-  .game-started #instructions {
-    display: none !important;
-  }
-}
-
 #ui,
 #instructions {
   display: none;
@@ -411,6 +404,12 @@ canvas {
   #game-stats {
     font-size: 14px;
     padding: 10px;
+  }
+  
+  #instructions {
+    font-size: 11px;
+    padding: 10px;
+    max-width: 270px; /* Maintain wider width for medium screens */
   }
 }
 
@@ -483,6 +482,13 @@ canvas {
   #game-controls button {
     padding: 4px 8px; /* More compact buttons */
     font-size: 10px; /* Smaller font */
+  }
+  
+  #instructions {
+    max-width: 260px; /* Slightly smaller but still wider than original 180px */
+    margin-top: 2px; /* Reduced margin */
+    padding: 3px; /* More compact padding */
+    font-size: 9px; /* Smaller font */
   }
   
   /* Ensure game canvas is centered and uses more screen space */
@@ -583,6 +589,13 @@ canvas {
   #quit-game-btn {
     width: 120px; /* Fixed width to match music toggle */
   }
+  
+  #instructions {
+    font-size: 9px;
+    padding: 5px;
+    line-height: 1.2;
+    max-width: 250px; /* Maintain wider width for small screens */
+  }
 }
 
 /* Very small mobile screens */
@@ -640,6 +653,12 @@ canvas {
   
   #quit-game-btn {
     width: 130px; /* Fixed width to match music toggle */
+  }
+  
+  #instructions {
+    font-size: 8px;
+    padding: 3px;
+    max-width: 240px; /* Maintain wider width for very small screens */
   }
 }
 
@@ -805,102 +824,96 @@ canvas {
   transform: translate(-50%, -50%) scale(1.1);
 }
 
-/* Joystick Visual Enhancement */
-#joystick-base.active {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4), inset 0 2px 4px rgba(255,255,255,0.2), 0 0 20px rgba(74, 103, 65, 0.3);
-  border-color: #6b9662;
-}
-
-#joystick-knob.moving {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.3), 0 0 15px rgba(120, 160, 110, 0.4);
-}
-
-/* Virtual Joystick Direction Indicator */
-#joystick-base::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 6px;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-}
-
-/* Mobile-specific joystick enhancements */
-@media (max-width: 900px) {
-  #virtual-joystick {
-    opacity: 0.95; /* Slightly more visible on mobile */
-  }
-  
+/* Mobile responsive joystick */
+@media (max-width: 900px) and (orientation: portrait) {
   #joystick-base {
-    box-shadow: 0 6px 16px rgba(0,0,0,0.4), inset 0 2px 4px rgba(255,255,255,0.15);
+    width: 140px;
+    height: 140px;
+    border-width: 5px;
   }
   
   #joystick-knob {
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5), inset 0 2px 3px rgba(255,255,255,0.25);
+    width: 60px;
+    height: 60px;
+    border-width: 4px;
   }
 }
 
 @media (max-width: 600px) {
-  #virtual-joystick {
-    opacity: 1; /* Full opacity on small screens for better visibility */
+  #joystick-base {
+    width: 110px;
+    height: 110px;
+    border-width: 3px;
+  }
+  
+  #joystick-knob {
+    width: 45px;
+    height: 45px;
+    border-width: 3px;
   }
 }
 
-/* Action button improvements for touch */
-@media (max-width: 900px) {
-  #action-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    align-items: center;
+@media (max-width: 400px) {
+  #joystick-base {
+    width: 100px;
+    height: 100px;
   }
+  
+  #joystick-knob {
+    width: 40px;
+    height: 40px;
+  }
+}
 
-  .action-btn {
-    background: rgba(65, 105, 225, 0.95);
-    border: 3px solid #4169E1;
-    border-radius: 12px;
-    color: white;
-    font-size: 14px;
-    font-weight: bold;
-    cursor: pointer;
-    user-select: none;
-    touch-action: manipulation;
-    transition: all 0.15s ease;
-    backdrop-filter: blur(5px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-    text-align: center;
-    line-height: 1.2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+/* Action Buttons */
+#action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: center;
+}
 
-  #spray-btn {
-    width: 65px; /* Reduced from 80px */
-    height: 65px; /* Reduced from 80px */
-    font-size: 10px; /* Reduced from 12px */
-    padding: 6px; /* Reduced from 8px */
-    flex-direction: column; /* Ensure vertical stacking */
-    justify-content: space-between; /* Distribute space evenly */
-  }
+.action-btn {
+  background: rgba(65, 105, 225, 0.95);
+  border: 3px solid #4169E1;
+  border-radius: 12px;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  transition: all 0.15s ease;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  text-align: center;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-  #pause-btn {
-    width: 45px; /* Reduced from 60px */
-    height: 45px; /* Reduced from 60px */
-    font-size: 16px; /* Reduced from 20px */
-  }
+#spray-btn {
+  width: 65px; /* Reduced from 80px */
+  height: 65px; /* Reduced from 80px */
+  font-size: 10px; /* Reduced from 12px */
+  padding: 6px; /* Reduced from 8px */
+  flex-direction: column; /* Ensure vertical stacking */
+  justify-content: space-between; /* Distribute space evenly */
+}
 
-  .action-btn:active,
-  .action-btn.pressed {
-    background: rgba(100, 140, 255, 1);
-    transform: scale(0.95);
-    border-color: #6495ED;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3), 0 0 8px rgba(80, 120, 240, 0.6);
-  }
+#pause-btn {
+  width: 45px; /* Reduced from 60px */
+  height: 45px; /* Reduced from 60px */
+  font-size: 16px; /* Reduced from 20px */
+}
+
+.action-btn:active,
+.action-btn.pressed {
+  background: rgba(100, 140, 255, 1);
+  transform: scale(0.95);
+  border-color: #6495ED;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3), 0 0 8px rgba(80, 120, 240, 0.6);
 }
 
 /* Mobile Portrait Optimization */
@@ -1159,55 +1172,4 @@ canvas {
   .tap-icon {
     font-size: 7px;
   }
-}
-
-/* Joystick spraying state styling */
-#joystick-base.spraying {
-  background: rgba(65, 105, 225, 0.8) !important;
-  border-color: #4169E1 !important;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3), 0 0 20px rgba(65, 105, 225, 0.6) !important;
-}
-
-#joystick-knob.spraying {
-  background: radial-gradient(circle at 30% 30%, rgba(100, 140, 255, 1), rgba(65, 105, 225, 1)) !important;
-  border-color: #6495ED !important;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.3), 0 0 16px rgba(100, 140, 255, 0.8) !important;
-}
-
-#joystick-base.spraying::after {
-  background: rgba(135, 206, 250, 0.8); /* Light blue center dot when spraying */
-  box-shadow: 0 0 8px rgba(135, 206, 250, 0.6);
-}
-
-/* Spray direction indicator on joystick */
-#joystick-base.spraying::before {
-  content: '💧';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 20px;
-  opacity: 0.7;
-  pointer-events: none;
-  z-index: 1;
-  text-shadow: 0 0 4px rgba(0, 191, 255, 0.8);
-  animation: pulse-spray 1s ease-in-out infinite alternate;
-}
-
-@keyframes pulse-spray {
-  from { 
-    opacity: 0.5; 
-    transform: translate(-50%, -50%) scale(0.9);
-  }
-  to { 
-    opacity: 0.9; 
-    transform: translate(-50%, -50%) scale(1.1);
-  }
-}
-
-/* Enhanced knob feedback when spraying */
-#joystick-knob.spraying {
-  background: radial-gradient(circle at 30% 30%, rgba(135, 206, 250, 1), rgba(65, 105, 225, 1)) !important;
-  border-color: #87CEEB !important;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.4), 0 0 20px rgba(135, 206, 250, 0.8) !important;
 }
