@@ -152,8 +152,8 @@
       height: 100dvh; /* Dynamic viewport height for better mobile support */
     }
   </style>
-  <script type="module" crossorigin src="/garden-defender/assets/index-CU5pngAU.js"></script>
-  <link rel="stylesheet" crossorigin href="/garden-defender/assets/index-9zpRl5U6.css">
+  <script type="module" crossorigin src="/garden-defender/assets/index-h_-GuObE.js"></script>
+  <link rel="stylesheet" crossorigin href="/garden-defender/assets/index-c-FR6Lyi.css">
 </head>
 <body>
   <div id="game-container">
@@ -202,22 +202,22 @@
           <button id="quit-game-btn">🚪 Quit Game</button>
         </div>
       </div>
-    </div>
-    
-    <!-- Mobile Touch Controls (overlay style) -->
-    <div id="mobile-controls">
-      <div id="dpad">
-        <button id="up-btn" class="dpad-btn">▲</button>
-        <div class="dpad-row">
-          <button id="left-btn" class="dpad-btn">◀</button>
-          <div class="dpad-center"></div>
-          <button id="right-btn" class="dpad-btn">▶</button>
+      
+      <!-- Mobile Touch Controls (part of layout flow) -->
+      <div id="mobile-controls" class="side-panel">
+        <div id="dpad">
+          <button id="up-btn" class="dpad-btn">▲</button>
+          <div class="dpad-row">
+            <button id="left-btn" class="dpad-btn">◀</button>
+            <div class="dpad-center"></div>
+            <button id="right-btn" class="dpad-btn">▶</button>
+          </div>
+          <button id="down-btn" class="dpad-btn">▼</button>
         </div>
-        <button id="down-btn" class="dpad-btn">▼</button>
-      </div>
-      <div id="action-buttons">
-        <button id="spray-btn" class="action-btn">💧 SPRAY<br>TAP ON</button>
-        <button id="pause-btn" class="action-btn">⏸️</button>
+        <div id="action-buttons">
+          <button id="spray-btn" class="action-btn">💧 SPRAY<br>TAP ON</button>
+          <button id="pause-btn" class="action-btn">⏸️</button>
+        </div>
       </div>
     </div>
   </div>
