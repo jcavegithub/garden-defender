@@ -152,8 +152,8 @@
       height: 100dvh; /* Dynamic viewport height for better mobile support */
     }
   </style>
-  <script type="module" crossorigin src="/garden-defender/assets/index-DIokvT2m.js"></script>
-  <link rel="stylesheet" crossorigin href="/garden-defender/assets/index-wq6scVhF.css">
+  <script type="module" crossorigin src="/garden-defender/assets/index-D5MJisSM.js"></script>
+  <link rel="stylesheet" crossorigin href="/garden-defender/assets/index-DwMcqQL4.css">
 </head>
 <body>
   <div id="game-container">
@@ -208,14 +208,18 @@
         <div id="dpad">
           <button id="up-btn" class="dpad-btn">▲</button>
           <div class="dpad-row">
-            <button id="left-btn" class="dpad-btn">◀<br><span class="water-icon">💧</span></button>
+            <button id="left-btn" class="dpad-btn"><span class="water-icon">💧</span><br>◀</button>
             <div class="dpad-center"></div>
             <button id="right-btn" class="dpad-btn">▶<br><span class="water-icon">💧</span></button>
           </div>
           <button id="down-btn" class="dpad-btn">▼</button>
         </div>
         <div id="action-buttons">
-          <button id="spray-btn" class="action-btn">💧 SPRAY<br><hr class="spray-divider"><span class="tap-icon">🚰</span> TAP ON</button>
+          <button id="spray-btn" class="action-btn">
+            <div class="spray-top">💧 SPRAY</div>
+            <hr class="spray-divider">
+            <div class="spray-bottom"><span class="tap-icon">🚰</span> TAP ON</div>
+          </button>
           <button id="pause-btn" class="action-btn">⏸️</button>
         </div>
       </div>
