@@ -152,20 +152,12 @@
       height: 100dvh; /* Dynamic viewport height for better mobile support */
     }
   </style>
-  <script type="module" crossorigin src="/garden-defender/assets/index-BZ-gHlcU.js"></script>
-  <link rel="stylesheet" crossorigin href="/garden-defender/assets/index-C9IloGWD.css">
+  <script type="module" crossorigin src="/garden-defender/assets/index-l4-aKCwS.js"></script>
+  <link rel="stylesheet" crossorigin href="/garden-defender/assets/index-BcdXj9Jf.css">
 </head>
 <body>
   <div id="game-container">
     <h1 id="game-title">🌱 Garden Defender 🦝</h1>
-    
-    <!-- Rotation prompt for mobile landscape mode -->
-    <div id="rotation-prompt">
-      <div class="rotate-icon">🔄</div>
-      <div>Please rotate your device</div>
-      <div>to portrait orientation</div>
-      <div style="font-size: 0.8em; margin-top: 20px;">For the best gaming experience</div>
-    </div>
     
     <!-- Main game layout with centered canvas and side panels -->
     <div id="game-layout">
@@ -176,6 +168,9 @@
           <div id="round">Round: 1</div>
           <div id="timer">Time: 60</div>
           <div id="vegetables-left">Vegetables: 0</div>
+        </div>
+        <!-- Dedicated pause notification container -->
+        <div id="pause-notification">
           <div id="pause-status"></div>
         </div>
         <div id="instructions">
