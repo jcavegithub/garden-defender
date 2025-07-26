@@ -152,12 +152,30 @@
       height: 100dvh; /* Dynamic viewport height for better mobile support */
     }
   </style>
-  <script type="module" crossorigin src="/garden-defender/assets/index-CgCPO6A8.js"></script>
-  <link rel="stylesheet" crossorigin href="/garden-defender/assets/index-1upjYAR1.css">
+  <script type="module" crossorigin src="/garden-defender/assets/index-RSyy5VzE.js"></script>
+  <link rel="stylesheet" crossorigin href="/garden-defender/assets/index-BrqsOdBI.css">
 </head>
 <body class="start-screen-active">
   <div id="game-container">
     <h1 id="game-title">🌱 Garden Defender 🦝</h1>
+    
+    <!-- Top 3 High Scores Display -->
+    <div id="top-scores-display">
+      <div id="top-scores-content">
+        <div class="top-score-item" id="score-1">
+          <span class="rank-icon">🥇</span>
+          <span class="score-info">No scores yet</span>
+        </div>
+        <div class="top-score-item" id="score-2">
+          <span class="rank-icon">🥈</span>
+          <span class="score-info">No scores yet</span>
+        </div>
+        <div class="top-score-item" id="score-3">
+          <span class="rank-icon">🥉</span>
+          <span class="score-info">No scores yet</span>
+        </div>
+      </div>
+    </div>
     
     <!-- Main game layout with centered canvas and side panels -->
     <div id="game-layout">
@@ -209,17 +227,15 @@
       <!-- Right side panel -->
       <div id="right-panel" class="side-panel">
         <div id="game-controls">
-          <button id="music-toggle">🎵 Music ON </button>
-          <button id="sound-toggle">🔊 Sounds ON </button>
-          <button id="save-game-btn">💾 Save Game</button>
-          <button id="load-game-btn">📁 Load Game</button>
-          <button id="leaderboard-btn">🏆 Leaderboard</button>
-          <button id="quit-game-btn">🚪 Quit Game</button>
-        </div>
-        <div id="leaderboard" style="display: none;">
-          <h3>🏆 Top Scores</h3>
-          <div id="high-scores"></div>
-          <button id="close-leaderboard-btn">✖️ Close</button>
+          <div class="control-row-top">
+            <button id="music-toggle">🎵 Music ON </button>
+            <button id="sound-toggle">🔊 Sounds ON </button>
+          </div>
+          <div class="control-row-bottom">
+            <button id="save-game-btn">💾 Save Game</button>
+            <button id="load-game-btn">📁 Load Game</button>
+            <button id="quit-game-btn">🚪 Quit Game</button>
+          </div>
         </div>
       </div>
       
