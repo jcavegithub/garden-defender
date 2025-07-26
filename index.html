@@ -152,10 +152,10 @@
       height: 100dvh; /* Dynamic viewport height for better mobile support */
     }
   </style>
-  <script type="module" crossorigin src="/garden-defender/assets/index-BSZC-CFV.js"></script>
-  <link rel="stylesheet" crossorigin href="/garden-defender/assets/index-S2F3y9eg.css">
+  <script type="module" crossorigin src="/garden-defender/assets/index-CgCPO6A8.js"></script>
+  <link rel="stylesheet" crossorigin href="/garden-defender/assets/index-1upjYAR1.css">
 </head>
-<body>
+<body class="start-screen-active">
   <div id="game-container">
     <h1 id="game-title">🌱 Garden Defender 🦝</h1>
     
@@ -211,7 +211,15 @@
         <div id="game-controls">
           <button id="music-toggle">🎵 Music ON </button>
           <button id="sound-toggle">🔊 Sounds ON </button>
+          <button id="save-game-btn">💾 Save Game</button>
+          <button id="load-game-btn">📁 Load Game</button>
+          <button id="leaderboard-btn">🏆 Leaderboard</button>
           <button id="quit-game-btn">🚪 Quit Game</button>
+        </div>
+        <div id="leaderboard" style="display: none;">
+          <h3>🏆 Top Scores</h3>
+          <div id="high-scores"></div>
+          <button id="close-leaderboard-btn">✖️ Close</button>
         </div>
       </div>
       
