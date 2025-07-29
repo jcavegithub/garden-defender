@@ -36,6 +36,9 @@ body {
   /* iOS specific fullscreen */
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: none;
+  /* iOS PWA specific fixes */
+  padding-bottom: 0px; /* Remove bottom padding that causes band */
+  background: linear-gradient(180deg, #2d4a2b 0%, #2d4a2b 95%, #2d4a2b 100%); /* Solid background to prevent green band */
 }
 
 /* Hide scrollbars for Webkit browsers */
@@ -65,6 +68,9 @@ body::-webkit-scrollbar {
   min-height: 100vh;
   min-height: 100dvh;
   min-height: -webkit-fill-available;
+  /* iOS PWA specific fixes */
+  padding-bottom: 0px; /* Remove bottom padding that causes band */
+  background: #2d4a2b; /* Ensure solid background color */
 }
 
 /* Main game layout - optimized for portrait orientation */
@@ -151,32 +157,51 @@ body::-webkit-scrollbar {
   white-space: nowrap;
 }
 
-/* Game controls panel - compact for portrait */
+/* Game controls panel - two-row layout */
 #game-controls {
   display: flex;
-  flex-direction: row;
-  gap: 10px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 8px;
   justify-content: center;
   align-items: center;
-  min-height: 60px; /* Ensure consistent height */
+  min-height: 80px; /* Increased height for two rows */
   position: relative; /* Establish positioning context */
 }
 
-#music-toggle, #sound-toggle, #quit-game-btn {
-  padding: 12px 20px;
+/* Top row for music and sound buttons */
+.control-row-top {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Bottom row for save, load, quit buttons */
+.control-row-bottom {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+}
+
+#music-toggle, #sound-toggle, #quit-game-btn, #save-game-btn, #load-game-btn {
+  padding: 10px 16px; /* Reduced padding for more buttons */
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-weight: bold;
-  font-size: 14px;
+  font-size: 12px; /* Smaller font for more buttons */
   transition: all 0.3s;
-  min-height: 45px;
+  min-height: 40px; /* Reduced height */
   touch-action: manipulation; /* Ensure proper touch handling */
   user-select: none; /* Prevent text selection on touch */
   box-sizing: border-box; /* Include padding in width calculation */
   flex-shrink: 0; /* Prevent buttons from shrinking */
   outline: none; /* Remove focus outline */
+  white-space: nowrap; /* Prevent text wrapping */
+  min-width: auto; /* Allow buttons to be smaller */
 }
 
 #music-toggle:focus,
@@ -216,11 +241,38 @@ body::-webkit-scrollbar {
   background-color: rgba(34, 139, 34, 1);
 }
 
+#save-game-btn,
+#load-game-btn {
+  background: #4CAF50;
+  color: white;
+  width: 110px; /* Reduced width from 140px to 110px */
+  text-align: center; /* Center the text */
+  box-sizing: border-box; /* Include padding in width calculation */
+  white-space: nowrap; /* Prevent text wrapping */
+  overflow: hidden; /* Hide any overflow */
+  position: relative; /* Ensure positioning context */
+}
+
+#save-game-btn:hover,
+#load-game-btn:hover {
+  background: #45a049;
+}
+
+#save-game-btn:disabled,
+#load-game-btn:disabled {
+  background: #666;
+  cursor: not-allowed;
+}
+
 #quit-game-btn {
   background-color: rgba(220, 20, 60, 0.8);
   color: white;
-  width: 140px; /* Fixed width to match music toggle */
+  width: 110px; /* Reduced width from 140px to 110px */
   text-align: center; /* Center the text */
+  box-sizing: border-box; /* Include padding in width calculation */
+  white-space: nowrap; /* Prevent text wrapping */
+  overflow: hidden; /* Hide any overflow */
+  position: relative; /* Ensure positioning context */
 }
 
 #quit-game-btn:hover {
@@ -240,30 +292,35 @@ canvas {
   display: block;
 }
 
-/* Pause notification container - positioned to not affect layout */
+/* Pause notification container - positioned to center over play field */
 #pause-notification {
-  position: relative;
-  width: 100%;
-  height: 0; /* Takes no space when not visible */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: auto;
+  height: auto;
   overflow: visible;
   display: flex;
   justify-content: center;
-  z-index: 100;
+  align-items: center;
+  z-index: 1000; /* Increased z-index to ensure it appears above game */
+  pointer-events: none; /* Allow clicks to pass through when not visible */
 }
 
 #pause-status {
-  position: absolute;
-  top: 5px; /* Small gap below scoreboard */
+  position: relative; /* Changed from absolute to relative */
+  top: 0; /* Reset top positioning */
   background-color: rgba(255, 165, 0, 0.95) !important;
   color: white;
   font-weight: bold;
   text-align: center;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 12px;
+  padding: 12px 20px; /* Increased padding for better visibility */
+  border-radius: 8px; /* Increased border radius */
+  font-size: 16px; /* Increased font size for center display */
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  border: 2px solid rgba(255, 140, 0, 0.8);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5); /* Enhanced shadow for center display */
+  border: 3px solid rgba(255, 140, 0, 0.8); /* Thicker border */
   display: none;
   animation: fadeIn 0.3s ease-in-out;
 }
@@ -308,20 +365,83 @@ canvas {
   width: 100%; /* Ensure it takes full width */
 }
 
+/* Top 3 High Scores Display */
+#top-scores-display {
+  width: 100%;
+  max-width: 250px; /* Reduced from 300px to 250px for better mobile fit */
+  margin: 10px auto 0 auto;
+  padding: 6px 12px; /* Reduced padding from 8px 15px */
+  background: linear-gradient(135deg, rgba(74, 103, 65, 0.9), rgba(45, 74, 43, 0.8));
+  border-radius: 10px;
+  border: 2px solid rgba(255, 215, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+#top-scores-content {
+  display: flex;
+  flex-direction: column; /* Changed from row to column for vertical stacking */
+  justify-content: center;
+  align-items: center;
+  gap: 6px; /* Increased gap for vertical spacing */
+}
+
+.top-score-item {
+  display: flex;
+  flex-direction: row; /* Changed to row for horizontal layout within each item */
+  align-items: center;
+  text-align: left; /* Changed from center to left */
+  width: 100%; /* Take full width */
+  padding: 4px 8px; /* Added padding for better spacing */
+  background: rgba(0, 0, 0, 0.2); /* Added subtle background */
+  border-radius: 6px; /* Added border radius */
+}
+
+.rank-icon {
+  font-size: 20px;
+  margin-right: 8px; /* Changed from margin-bottom to margin-right */
+  margin-bottom: 0; /* Reset bottom margin */
+  display: block;
+  flex-shrink: 0; /* Prevent icon from shrinking */
+}
+
+.score-info {
+  color: white;
+  font-size: 11px; /* Slightly increased font size */
+  font-weight: bold;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  line-height: 1.3; /* Increased line height for better readability */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1; /* Take remaining space */
+}
+
+.score-info.no-score {
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+  font-size: 10px; /* Slightly increased font size */
+}
+
 #start-screen {
-  position: absolute;
-  /* Position directly over the game canvas */
+  position: fixed;
+  /* Position relative to viewport to cover entire game area */
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   background: linear-gradient(135deg, rgba(45, 74, 43, 0.95), rgba(74, 124, 89, 0.95));
-  display: flex;
+  display: none; /* Hidden by default */
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  border-radius: 8px; /* Match game canvas border radius */
-  border: 3px solid #4a6741; /* Match game canvas border */
+  border-radius: 0; /* Remove border radius for full screen */
+  border: none; /* Remove border for full screen */
+}
+
+/* Show start screen by default or when explicitly set */
+.start-screen-active #start-screen,
+body:not(.game-started):not(.game-over) #start-screen {
+  display: flex;
 }
 
 #start-content {
@@ -353,10 +473,10 @@ canvas {
   font-weight: bold;
   border-radius: 8px;
   cursor: pointer;
-  margin-top: 30px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   transition: all 0.3s ease;
   outline: none; /* Remove focus outline */
+  min-width: 200px;
 }
 
 #start-game-btn:focus {
@@ -375,8 +495,152 @@ canvas {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
+/* Start screen buttons container */
+#start-screen-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: center;
+  margin-top: 30px;
+}
+
+/* Load Game button for start screen */
+#load-game-start-btn {
+  background: linear-gradient(45deg, #4169E1, #0000CD);
+  color: white;
+  border: none;
+  padding: 15px 30px;
+  font-size: 1.3em;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  outline: none;
+  min-width: 200px;
+}
+
+#load-game-start-btn:focus {
+  outline: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+#load-game-start-btn:hover {
+  background: linear-gradient(45deg, #0000CD, #00008B);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+#load-game-start-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+#load-game-start-btn:disabled {
+  background: #666;
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+
+#load-game-start-btn:disabled:hover {
+  transform: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
 .game-started #start-screen {
   display: none;
+}
+
+.game-over #start-screen {
+  display: none;
+}
+
+/* Game Over Screen */
+#game-over-screen {
+  position: fixed;
+  /* Position relative to viewport to cover entire game area */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(139, 0, 0, 0.95), rgba(205, 92, 92, 0.95));
+  display: none; /* Hidden by default */
+  align-items: center;
+  justify-content: center;
+  z-index: 1001; /* Above start screen */
+  border-radius: 0; /* Remove border radius for full screen */
+  border: none; /* Remove border for full screen */
+}
+
+.game-over #game-over-screen {
+  display: flex;
+}
+
+#game-over-content {
+  text-align: center;
+  color: white;
+  padding: 40px;
+  max-width: 500px;
+}
+
+#game-over-content h2 {
+  font-size: 2.2em;
+  margin-bottom: 20px;
+  color: #ff6b6b;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+#game-over-content p {
+  font-size: 1.1em;
+  margin: 10px 0;
+  line-height: 1.4;
+}
+
+#final-score-display, #final-round-display {
+  font-size: 1.3em;
+  font-weight: bold;
+  color: #ffff99;
+  margin: 15px 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+#start-new-game-btn {
+  background: linear-gradient(45deg, #ff4444, #cc0000);
+  color: white;
+  border: none;
+  padding: 15px 30px;
+  font-size: 1.3em;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 30px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+#start-new-game-btn:focus {
+  outline: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+#start-new-game-btn:hover {
+  background: linear-gradient(45deg, #cc0000, #990000);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+#start-new-game-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .game-started #ui,
@@ -474,15 +738,26 @@ canvas {
   }
   
   #game-controls {
-    flex-direction: row;
+    flex-direction: column;
     justify-content: center;
-    gap: 6px; /* Reduced gap */
+    gap: 6px; /* Reduced gap between rows */
     max-width: none;
   }
   
+  .control-row-top,
+  .control-row-bottom {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 4px; /* Gap between buttons in each row */
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+  }
+  
   #game-controls button {
-    padding: 4px 8px; /* More compact buttons */
-    font-size: 10px; /* Smaller font */
+    padding: 3px 6px; /* More compact buttons */
+    font-size: 9px; /* Smaller font */
+    min-height: 32px; /* Smaller height */
+    min-width: 70px; /* Adjusted width for two-row layout */
   }
   
   /* Ensure game canvas is centered and uses more screen space */
@@ -499,8 +774,9 @@ canvas {
   }
   
   #start-screen {
-    /* Remove fixed dimensions - let it overlay the game canvas naturally */
-    border: 2px solid #4a6741; /* Thinner border for mobile */
+    /* Full screen overlay on mobile */
+    position: fixed;
+    border: none;
   }
   
   /* Mobile controls as part of layout flow */
@@ -511,7 +787,7 @@ canvas {
     align-items: center;
     flex-direction: row;
     padding: 5px 15px;
-    margin-top: 5px;
+    margin-top: 0px; /* Changed from -10px to positive 5px to prevent overlap */
   }
   
   .game-started #mobile-controls {
@@ -580,8 +856,23 @@ canvas {
     width: 120px; /* Fixed width for mobile */
   }
   
+  #save-game-btn,
+  #load-game-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+    min-height: 32px;
+    width: 100px; /* Reduced width for mobile */
+    outline: none;
+  }
+  
+  #save-game-btn:focus,
+  #load-game-btn:focus {
+    outline: none;
+    box-shadow: none;
+  }
+  
   #quit-game-btn {
-    width: 120px; /* Fixed width to match music toggle */
+    width: 100px; /* Reduced width for mobile from 120px */
   }
 }
 
@@ -602,6 +893,30 @@ canvas {
     max-height: calc(100vh - 150px);
     transform: scale(0.9); /* Slightly scale down for very small screens */
     transform-origin: center;
+  }
+  
+  /* Mobile top scores styling */
+  #top-scores-display {
+    margin: 5px auto 0 auto;
+    padding: 4px 8px; /* Reduced padding from 6px 12px */
+    max-width: 90%; /* Use percentage for better mobile responsiveness */
+  }
+  
+  .rank-icon {
+    font-size: 16px;
+    margin-right: 6px; /* Adjusted for mobile */
+  }
+  
+  .score-info {
+    font-size: 9px; /* Slightly smaller for mobile */
+  }
+  
+  .score-info.no-score {
+    font-size: 8px;
+  }
+  
+  .top-score-item {
+    padding: 3px 6px; /* Reduced padding for mobile */
   }
   
   #game-stats {
@@ -638,8 +953,25 @@ canvas {
     width: 130px; /* Fixed width for 600px breakpoint */
   }
   
+  #save-game-btn,
+  #load-game-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+    min-height: 36px;
+    width: 110px; /* Reduced width for 600px breakpoint */
+    touch-action: manipulation;
+    user-select: none;
+    outline: none;
+  }
+  
+  #save-game-btn:focus,
+  #load-game-btn:focus {
+    outline: none;
+    box-shadow: none;
+  }
+  
   #quit-game-btn {
-    width: 130px; /* Fixed width to match music toggle */
+    width: 110px; /* Reduced width for 600px breakpoint from 130px */
   }
 }
 
@@ -657,8 +989,9 @@ canvas {
   }
   
   #start-screen {
-    /* Overlay the game canvas on medium mobile screens */
-    border: 2px solid #4a6741; /* Thinner border for mobile */
+    /* Full screen overlay on medium mobile screens */
+    position: fixed;
+    border: none;
   }
   
   #game-stats {
@@ -687,8 +1020,9 @@ canvas {
   }
   
   #start-screen {
-    /* Overlay the game canvas on small mobile screens */
-    border: 2px solid #4a6741; /* Thinner border for mobile */
+    /* Full screen overlay on small mobile screens */
+    position: fixed;
+    border: none;
   }
   
   #game-title {
@@ -722,11 +1056,14 @@ canvas {
   right: auto;
   z-index: 1000;
   pointer-events: none;
-  padding: 5px 15px 10px 15px; /* Reduced padding significantly */
-  background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.05) 20%, rgba(0,0,0,0.15) 100%);
+  padding: 5px 15px 0px 15px; /* Remove bottom padding completely */
+  background: transparent; /* Made transparent to prevent green showing through on iOS */
   height: auto; /* Let it size naturally */
   box-sizing: border-box;
-  margin-top: 5px; /* Small gap above controls */
+  margin-top: 0px; /* Remove all top margin */
+  margin-bottom: 0; /* Ensure no bottom margin */
+  /* iOS PWA specific fixes */
+  padding-bottom: 0px; /* Remove all bottom padding to eliminate band */
 }
 
 .game-started #mobile-controls {
@@ -880,18 +1217,39 @@ canvas {
   }
 
   #spray-btn {
-    width: 65px; /* Reduced from 80px */
-    height: 65px; /* Reduced from 80px */
-    font-size: 10px; /* Reduced from 12px */
-    padding: 6px; /* Reduced from 8px */
-    flex-direction: column; /* Ensure vertical stacking */
-    justify-content: space-between; /* Distribute space evenly */
+    /* Classic Arcade Button Style - Blue */
+    width: 75px; /* Reduced from 80px */
+    height: 75px; /* Reduced from 80px */
+    border-radius: 50%; /* Perfect circle */
+    background: linear-gradient(145deg, #4488ff, #0066cc, #004499);
+    border: 4px solid #003366;
+    box-shadow: 
+      0 6px 0 #001133, /* Bottom shadow for raised effect */
+      0 8px 15px rgba(0,0,0,0.4), /* Drop shadow */
+      inset 0 2px 0 rgba(255,255,255,0.2), /* Top highlight */
+      inset 0 -2px 0 rgba(0,0,0,0.3); /* Bottom inset shadow */
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #ffffff;
+    text-shadow: 
+      0 1px 0 rgba(0,0,0,0.8),
+      0 2px 2px rgba(0,0,0,0.6);
+    padding: 5px;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    transform: translateY(0);
+    transition: all 0.1s ease;
+    /* Remove backdrop-filter for cleaner arcade look */
+    backdrop-filter: none;
   }
 
   #pause-btn {
-    width: 45px; /* Reduced from 60px */
-    height: 45px; /* Reduced from 60px */
-    font-size: 16px; /* Reduced from 20px */
+    width: 40px; /* Reduced from 45px */
+    height: 40px; /* Reduced from 45px */
+    font-size: 14px; /* Reduced from 16px */
   }
 
   .action-btn:active,
@@ -901,18 +1259,51 @@ canvas {
     border-color: #6495ED;
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.3), 0 0 8px rgba(80, 120, 240, 0.6);
   }
+
+  /* Classic Arcade Button Pressed Effect */
+  #spray-btn:active,
+  #spray-btn.pressed,
+  #spray-btn.spraying {
+    /* Pressed down effect */
+    transform: translateY(4px);
+    background: linear-gradient(145deg, #3377dd, #0055aa, #003377);
+    box-shadow: 
+      0 2px 0 #001133, /* Reduced bottom shadow */
+      0 4px 8px rgba(0,0,0,0.6), /* Stronger drop shadow when pressed */
+      inset 0 -2px 0 rgba(255,255,255,0.1), /* Inverted highlight */
+      inset 0 2px 4px rgba(0,0,0,0.4); /* Stronger inset shadow */
+    border-color: #002244;
+  }
+
+  /* Arcade Button Hover Effect (for desktop) */
+  #spray-btn:hover:not(:active):not(.pressed):not(.spraying) {
+    background: linear-gradient(145deg, #5599ff, #3377dd, #0066cc);
+    box-shadow: 
+      0 6px 0 #001133,
+      0 10px 18px rgba(0,0,0,0.5),
+      inset 0 2px 0 rgba(255,255,255,0.3),
+      inset 0 -2px 0 rgba(0,0,0,0.3),
+      0 0 20px rgba(68, 136, 255, 0.3); /* Subtle blue glow */
+    transform: translateY(-1px); /* Slight lift on hover */
+  }
 }
 
 /* Mobile Portrait Optimization */
 @media (max-width: 900px) and (orientation: portrait) {
   #mobile-controls {
     display: none; /* Hidden by default */
-    height: 140px; /* Match the main mobile controls height */
+    height: auto;
+    padding-bottom: 0 !important;
   }
   
   .game-started #mobile-controls {
     display: flex;
-    padding: 10px 20px 15px 20px; /* Reduced padding to match main controls */
+    padding: 8px 10px 0 10px; /* Remove bottom padding */
+    margin-top: 0px;
+    margin-bottom: 0px;
+    background: transparent;
+    padding-bottom: 0px; /* Remove all bottom padding */
+    height: auto;
   }
   
   /* Larger joystick for portrait mode */
@@ -929,65 +1320,65 @@ canvas {
   }
   
   #spray-btn {
-    width: 85px;
-    height: 85px;
-    font-size: 13px;
+    /* Larger arcade button for portrait mode */
+    width: 95px; /* Reduced from 100px */
+    height: 95px; /* Reduced from 100px */
+    font-size: 12px;
+    /* Maintain arcade styling from main definition */
   }
   
   #pause-btn {
-    width: 65px;
-    height: 65px;
-    font-size: 22px;
+    width: 55px; /* Reduced from 65px */
+    height: 55px; /* Reduced from 65px */
+    font-size: 18px; /* Reduced from 22px */
   }
 }
 
-/* Mobile touch feedback for game control buttons */
+  /* Mobile touch feedback for game control buttons */
 @media (max-width: 900px) {
-  #music-toggle:active, #sound-toggle:active, #quit-game-btn:active {
+  #music-toggle:active, #sound-toggle:active, #quit-game-btn:active,
+  #save-game-btn:active, #load-game-btn:active {
     transform: scale(0.95);
     opacity: 0.8;
   }
   
-  /* Add touch-friendly spacing */
-  #game-controls {
-    gap: 8px; /* Ensure buttons aren't too close together */
-  }
-  
-  #game-controls button {
-    min-width: 100px; /* Ensure buttons are wide enough for easy tapping */
+  /* Add touch-friendly spacing for two-row layout */
+  .control-row-top,
+  .control-row-bottom {
+    gap: 6px; /* Spacing between buttons in each row */
   }
 }
 
 /* Mobile responsive pause notification */
 @media (max-width: 900px) {
   #pause-notification {
-    position: relative;
-    margin-top: 2px;
+    /* Keep centered positioning on mobile */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
   }
   
   #pause-status {
-    position: absolute;
-    top: 2px;
-    font-size: 11px;
-    padding: 6px 12px;
-    min-width: 200px;
+    font-size: 14px; /* Slightly smaller on mobile */
+    padding: 10px 16px;
+    border-radius: 6px;
   }
 }
 
 @media (max-width: 600px) {
   #pause-status {
-    font-size: 10px;
-    padding: 4px 8px;
-    min-width: 180px;
-    top: 1px;
+    font-size: 12px; /* Adjusted for smaller screens */
+    padding: 8px 12px;
+    border-radius: 6px;
   }
 }
 
 @media (max-width: 400px) {
   #pause-status {
-    font-size: 9px;
-    padding: 3px 6px;
-    min-width: 160px;
+    font-size: 11px; /* Adjusted for very small screens */
+    padding: 6px 10px;
+    border-radius: 4px;
   }
 }
 
@@ -1013,6 +1404,17 @@ canvas {
     font-size: 1.1em;
     margin-top: 20px;
   }
+  
+  #start-screen-buttons {
+    margin-top: 20px;
+    gap: 12px;
+  }
+  
+  #load-game-start-btn {
+    padding: 12px 25px;
+    font-size: 1.1em;
+    min-width: 180px;
+  }
 }
 
 @media (max-width: 600px) {
@@ -1035,6 +1437,17 @@ canvas {
     padding: 10px 20px;
     font-size: 1em;
     margin-top: 15px;
+  }
+  
+  #start-screen-buttons {
+    margin-top: 15px;
+    gap: 10px;
+  }
+  
+  #load-game-start-btn {
+    padding: 10px 20px;
+    font-size: 1em;
+    min-width: 160px;
   }
 }
 
@@ -1060,6 +1473,17 @@ canvas {
     font-size: 0.9em;
     margin-top: 12px;
   }
+  
+  #start-screen-buttons {
+    margin-top: 12px;
+    gap: 8px;
+  }
+  
+  #load-game-start-btn {
+    padding: 8px 16px;
+    font-size: 0.9em;
+    min-width: 140px;
+  }
 }
 
 /* Desktop styles - increase title size for larger screens */
@@ -1072,6 +1496,30 @@ canvas {
   #game-layout {
     gap: 5px;
     padding: 10px;
+  }
+  
+  /* Desktop top scores styling */
+  #top-scores-display {
+    margin: 15px auto 5px auto;
+    padding: 12px 20px;
+    max-width: 280px; /* Reduced from 350px for narrower desktop display */
+  }
+  
+  .rank-icon {
+    font-size: 24px;
+    margin-right: 10px; /* Adjusted for desktop */
+  }
+  
+  .score-info {
+    font-size: 13px; /* Slightly larger for desktop */
+  }
+  
+  .score-info.no-score {
+    font-size: 12px;
+  }
+  
+  .top-score-item {
+    padding: 6px 10px; /* Increased padding for desktop */
   }
 }
 
@@ -1113,13 +1561,13 @@ canvas {
   margin-left: 2px;
 }
 
-/* Spray button divider and tap icon */
+/* Spray button divider and tap icon - optimized for circular arcade button */
 .spray-divider {
   border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.3);
-  margin: 2px 0;
-  width: 80%;
-  align-self: center; /* Center the divider */
+  border-top: 1px solid rgba(255, 255, 255, 0.4);
+  margin: 6px 0; /* Increased from 4px to 6px for even more spacing */
+  width: 70%;
+  align-self: center;
 }
 
 .spray-top, .spray-bottom {
@@ -1127,37 +1575,44 @@ canvas {
   align-items: center;
   justify-content: center;
   text-align: center;
-  line-height: 1;
+  line-height: 0.9;
+  font-size: 10px;
+  font-weight: 900;
+  margin: 3px 0; /* Increased from 2px to 3px for even more spacing */
 }
 
 .tap-icon {
-  color: #32CD32;
-  text-shadow: 0 0 2px rgba(50, 205, 50, 0.5);
-  font-size: 10px;
+  color: #ffff00;
+  text-shadow: 0 0 2px rgba(255, 255, 0, 0.8);
+  font-size: 12px;
 }
 
 /* Enhanced mobile breakpoint styling */
 @media (max-width: 600px) {
   .water-icon {
-    font-size: 12px; /* Doubled from 6px */
+    font-size: 18px; /* Increased from 16px */
   }
   
   .tap-icon {
-    font-size: 8px;
+    font-size: 14px;
   }
   
   .spray-divider {
+    margin: 2px 0;
+  }
+  
+  .spray-top, .spray-bottom {
     margin: 1px 0;
   }
 }
 
 @media (max-width: 400px) {
   .water-icon {
-    font-size: 10px; /* Doubled from 5px */
+    font-size: 16px; /* Increased from 14px */
   }
   
   .tap-icon {
-    font-size: 7px;
+    font-size: 12px;
   }
 }
 

@@ -153,9 +153,27 @@
     }
   </style>
 </head>
-<body>
+<body class="start-screen-active">
   <div id="game-container">
     <h1 id="game-title">🌱 Garden Defender 🦝</h1>
+    
+    <!-- Top 3 High Scores Display -->
+    <div id="top-scores-display">
+      <div id="top-scores-content">
+        <div class="top-score-item" id="score-1">
+          <span class="rank-icon">🥇</span>
+          <span class="score-info">No scores yet</span>
+        </div>
+        <div class="top-score-item" id="score-2">
+          <span class="rank-icon">🥈</span>
+          <span class="score-info">No scores yet</span>
+        </div>
+        <div class="top-score-item" id="score-3">
+          <span class="rank-icon">🥉</span>
+          <span class="score-info">No scores yet</span>
+        </div>
+      </div>
+    </div>
     
     <!-- Main game layout with centered canvas and side panels -->
     <div id="game-layout">
@@ -187,7 +205,21 @@
             <p>💧 Use your water spray to stop them</p>
             <p>🚰 Turn on the water tap if enemies turn it off</p>
             <p class="mobile-only">📱 Hold device in portrait for best mobile experience</p>
-            <button id="start-game-btn">🎮 Start New Game</button>
+            <div id="start-screen-buttons">
+              <button id="start-game-btn">🎮 Start New Game</button>
+              <button id="load-game-start-btn" disabled>📁 No Saved Games</button>
+            </div>
+          </div>
+        </div>
+        <div id="game-over-screen">
+          <div id="game-over-content">
+            <h2>🍎 Game Over! 🍎</h2>
+            <p>You lost all your vegetables!</p>
+            <div id="final-score-display">Final Score: 0</div>
+            <div id="final-round-display">Reached Round: 1</div>
+            <p>🐿️🦝 The critters got the better of you this time!</p>
+            <p>💪 Try again and defend your garden better!</p>
+            <button id="start-new-game-btn">🎮 Start New Game</button>
           </div>
         </div>
         <div id="game"></div>
@@ -196,9 +228,15 @@
       <!-- Right side panel -->
       <div id="right-panel" class="side-panel">
         <div id="game-controls">
-          <button id="music-toggle">🎵 Music ON </button>
-          <button id="sound-toggle">🔊 Sounds ON </button>
-          <button id="quit-game-btn">🚪 Quit Game</button>
+          <div class="control-row-top">
+            <button id="music-toggle">🎵 Music ON </button>
+            <button id="sound-toggle">🔊 Sounds ON </button>
+          </div>
+          <div class="control-row-bottom">
+            <button id="save-game-btn">💾 Save Game</button>
+            <button id="load-game-btn">📁 Load Game</button>
+            <button id="quit-game-btn">🚪 Quit Game</button>
+          </div>
         </div>
       </div>
       
