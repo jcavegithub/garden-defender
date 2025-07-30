@@ -1,7 +1,7 @@
 import './style.css';
 import Phaser from 'phaser';
 // Using real Firebase - switched from mock implementation
-import { FirebaseManager } from './firebase.js';
+import FirebaseManager from './firebase.js';
 
 class GameScene extends Phaser.Scene {
     constructor() {
@@ -31,6 +31,7 @@ class GameScene extends Phaser.Scene {
         this.roundStarting = false; // Flag to prevent multiple simultaneous round starts
         this.vegetablesDropped = false; // Flag to prevent multiple vegetable drops per round
         this.gardenerAngle = 0; // Track gardener's rotation angle in radians for perfect precision
+        this.messageTimeout = null; // Track message display timeout to prevent overlapping messages
         this.audioContext = null; // For sound effects
         this.musicGainNode = null; // For background music
         this.musicPlaying = false;
@@ -503,6 +504,10 @@ class GameScene extends Phaser.Scene {
         tapBodyOffGraphics.fillRect(7.5, 13.5, 3, 27);
         tapBodyOffGraphics.fillRect(13.5, 7.5, 3, 33);
         
+        // Add subtle shadow/dry area at bottom to match "on" state visual footprint
+        tapBodyOffGraphics.fillStyle(0x555555, 0.3); // Semi-transparent dark area
+        tapBodyOffGraphics.fillCircle(18, 45, 1.5);
+        
             tapBodyOffGraphics.generateTexture('tap-body-off', 36, 48);
             tapBodyOffGraphics.destroy();
         }
@@ -517,16 +522,16 @@ class GameScene extends Phaser.Scene {
         tapHandleOffGraphics.fillStyle(0xFF4500);
         tapHandleOffGraphics.fillCircle(18, 12, 7.5);
         
-        // Handle lever (vertical when off - red) - thicker with black outline, moved higher
+        // Handle lever (vertical when off - red) - made longer to match horizontal lever visual impact
         tapHandleOffGraphics.fillStyle(0x000000); // Black outline
-        tapHandleOffGraphics.fillRect(13.5, -6, 9, 24); // Moved up by 4 pixels (was 0, now -4)
-        tapHandleOffGraphics.fillCircle(18, -6, 4.5); // Moved up by 4 pixels (was 0, now -4)
-        tapHandleOffGraphics.fillCircle(18, 18, 4.5); // Moved up by 4 pixels (was 16, now 12)
+        tapHandleOffGraphics.fillRect(13.5, -9, 9, 30); // Extended length to match horizontal lever (30 pixels)
+        tapHandleOffGraphics.fillCircle(18, -9, 4.5); // Top cap
+        tapHandleOffGraphics.fillCircle(18, 21, 4.5); // Bottom cap
         
         tapHandleOffGraphics.fillStyle(0xDC143C);
-        tapHandleOffGraphics.fillRect(15, -4.5, 6, 21); // Moved up by 4 pixels (was 1, now -3)
-        tapHandleOffGraphics.fillCircle(18, -4.5, 3); // Moved up by 4 pixels (was 1, now -3)
-        tapHandleOffGraphics.fillCircle(18, 16.5, 3); // Moved up by 4 pixels (was 15, now 11)
+        tapHandleOffGraphics.fillRect(15, -7.5, 6, 27); // Extended inner lever
+        tapHandleOffGraphics.fillCircle(18, -7.5, 3); // Top cap inner
+        tapHandleOffGraphics.fillCircle(18, 19.5, 3); // Bottom cap inner
         
             tapHandleOffGraphics.generateTexture('tap-handle-off', 36, 48);
             tapHandleOffGraphics.destroy();
@@ -684,8 +689,6 @@ class GameScene extends Phaser.Scene {
             
             oscillator.start(this.audioContext.currentTime);
             oscillator.stop(this.audioContext.currentTime + duration);
-            
-            console.log(`Playing sound: ${frequency}Hz for ${duration}s`);
         } catch (error) {
             console.log('Error playing sound:', error);
         }
@@ -791,8 +794,6 @@ class GameScene extends Phaser.Scene {
     }
 
     async loadGameState(saveName = null) {
-        console.log('loadGameState called');
-        
         // If no save name provided, show save selection dialog
         if (saveName === null) {
             saveName = await this.showLoadGameDialog();
@@ -800,12 +801,9 @@ class GameScene extends Phaser.Scene {
         }
         
         try {
-            console.log('Calling firebaseManager.loadGameState()...');
             const savedState = await this.firebaseManager.loadGameState(saveName);
-            console.log('Received saved state:', savedState);
             
             if (savedState && savedState.gameStarted && !savedState.cleared) {
-                console.log('Valid saved state found, restoring...');
                 // Restore game state
                 this.score = savedState.score || 0;
                 this.round = savedState.round || 1;
@@ -814,17 +812,9 @@ class GameScene extends Phaser.Scene {
                 this.gardenerAngle = savedState.gardenerAngle || 0;
                 this.waterEnabled = savedState.waterEnabled !== undefined ? savedState.waterEnabled : true;
                 
-                console.log('Restored basic state:', {
-                    score: this.score,
-                    round: this.round,
-                    timeLeft: this.timeLeft,
-                    vegetablesLeft: this.vegetablesLeft
-                });
-                
                 // Restore gardener position
                 if (savedState.gardenerX && savedState.gardenerY) {
                     this.gardener.setPosition(savedState.gardenerX, savedState.gardenerY);
-                    console.log('Restored gardener position:', savedState.gardenerX, savedState.gardenerY);
                 }
                 
                 // Restore vegetables
@@ -834,10 +824,13 @@ class GameScene extends Phaser.Scene {
                         if (vegData.inPlay) {
                             const vegetable = this.physics.add.sprite(vegData.x, vegData.y, vegData.texture);
                             vegetable.setData('inPlay', vegData.inPlay);
+                            // Ensure restored vegetables have normal appearance
+                            vegetable.setScale(1.0);
+                            vegetable.setTint(0xffffff);
+                            vegetable.setAlpha(1.0);
                             this.vegetables.add(vegetable);
                         }
                     });
-                    console.log('Restored vegetables:', savedState.vegetables.length);
                 }
                 
                 // Update water tap state
@@ -851,10 +844,7 @@ class GameScene extends Phaser.Scene {
                     this.waterTapBody.setData('isOn', false);
                 }
                 
-                console.log('Game state loaded successfully');
                 return true;
-            } else {
-                console.log('No valid saved state found or game was cleared');
             }
         } catch (error) {
             console.error('Error loading game state:', error);
@@ -866,27 +856,22 @@ class GameScene extends Phaser.Scene {
         try {
             const loadGameBtn = document.getElementById('load-game-start-btn');
             if (!loadGameBtn) {
-                console.log('Load game button not found');
                 return;
             }
             
             // Check if there are any saved games available
-            console.log('Checking for saved games...');
             const savedGames = await this.firebaseManager.getSavedGames();
-            console.log('Found saved games:', savedGames.length, savedGames);
             
             if (savedGames && savedGames.length > 0) {
                 // Enable the button if there are saved games
                 loadGameBtn.disabled = false;
                 loadGameBtn.textContent = '📁 Load Saved Game';
                 loadGameBtn.title = `Load one of ${savedGames.length} saved game${savedGames.length > 1 ? 's' : ''}`;
-                console.log('Button enabled: Load Saved Game');
             } else {
                 // Disable the button if no saved games
                 loadGameBtn.disabled = true;
                 loadGameBtn.textContent = '📁 No Saved Games';
                 loadGameBtn.title = 'No saved games available';
-                console.log('Button disabled: No Saved Games');
             }
         } catch (error) {
             console.error('Error updating load game button state:', error);
@@ -902,13 +887,10 @@ class GameScene extends Phaser.Scene {
 
     async initializeFirebaseAndUI() {
         try {
-            console.log('Waiting for Firebase to initialize...');
-            
             // Wait for Firebase initialization to complete
             const success = await this.firebaseManager.waitForInitialization();
             
             if (success && this.firebaseManager.isInitialized) {
-                console.log('Firebase initialized successfully, updating UI...');
                 // Now that Firebase is ready, update the load game button state
                 this.updateLoadGameButtonState();
             } else {
@@ -1144,7 +1126,7 @@ class GameScene extends Phaser.Scene {
                 if (this.topScores[i]) {
                     const score = this.topScores[i];
                     const playerName = score.playerName || 'Anonymous';
-                    const displayName = playerName.length > 8 ? playerName.substring(0, 8) + '...' : playerName;
+                    const displayName = playerName.length > 12 ? playerName.substring(0, 12) + '...' : playerName;
                     
                     scoreInfoElement.textContent = `${displayName}: ${score.score}`;
                     scoreInfoElement.classList.remove('no-score');
@@ -1158,6 +1140,13 @@ class GameScene extends Phaser.Scene {
 
     showMessage(message, duration = 3000) {
         console.log('showMessage called with:', message, 'duration:', duration);
+        
+        // Clear any existing message timeout
+        if (this.messageTimeout) {
+            clearTimeout(this.messageTimeout);
+            this.messageTimeout = null;
+        }
+        
         // Create or update message element
         let messageElement = document.getElementById('game-message');
         if (!messageElement) {
@@ -1165,21 +1154,28 @@ class GameScene extends Phaser.Scene {
             messageElement = document.createElement('div');
             messageElement.id = 'game-message';
             messageElement.style.cssText = `
-                position: fixed;
+                position: absolute;
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
-                background: rgba(0, 0, 0, 0.9);
+                background: rgba(0, 0, 0, 0.6);
                 color: white;
-                padding: 20px;
+                padding: 20px 30px;
                 border-radius: 10px;
                 font-size: 18px;
                 font-weight: bold;
                 text-align: center;
                 z-index: 1000;
                 pointer-events: none;
+                min-width: 380px;
+                max-width: 90vw;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+                line-height: 1.4;
             `;
-            document.body.appendChild(messageElement);
+            // Append to the game container instead of body for proper positioning
+            const gameContainer = document.getElementById('game') || document.getElementById('game-container') || document.body;
+            gameContainer.appendChild(messageElement);
         } else {
             console.log('Using existing message element');
         }
@@ -1189,9 +1185,10 @@ class GameScene extends Phaser.Scene {
         console.log('Message element updated and shown');
         
         // Hide after duration
-        setTimeout(() => {
+        this.messageTimeout = setTimeout(() => {
             messageElement.style.display = 'none';
             console.log('Message hidden after', duration, 'ms');
+            this.messageTimeout = null;
         }, duration);
     }
 
@@ -1377,10 +1374,11 @@ class GameScene extends Phaser.Scene {
                 `;
 
                 savedGames.forEach((save, index) => {
-                    const date = new Date(save.timestamp).toLocaleDateString();
-                    const time = new Date(save.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    const date = save.date ? new Date(save.date).toLocaleDateString() : 'Unknown date';
+                    const time = save.date ? new Date(save.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Unknown time';
+                    const displayName = save.saveName || 'Unnamed Save';
                     dialogHTML += `
-                        <div class="save-item" data-save-name="${save.name}" style="
+                        <div class="save-item" data-save-name="${save.saveName}" style="
                             background: rgba(0, 0, 0, 0.3);
                             border: 2px solid #4a6741;
                             border-radius: 8px;
@@ -1391,14 +1389,14 @@ class GameScene extends Phaser.Scene {
                             text-align: left;
                             position: relative;
                         ">
-                            <div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">${save.name}</div>
+                            <div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">${displayName}</div>
                             <div style="font-size: 14px; color: #ccc;">
-                                Score: ${save.score} | Round: ${save.round} | Time: ${save.timeLeft}s
+                                Score: ${save.score || 0} | Round: ${save.round || 1} | Time: ${save.timeLeft || 0}s
                             </div>
                             <div style="font-size: 12px; color: #aaa;">
                                 Saved: ${date} at ${time}
                             </div>
-                            <button class="delete-save-btn" data-save-name="${save.name}" style="
+                            <button class="delete-save-btn" data-save-name="${save.saveName}" style="
                                 position: absolute;
                                 right: 10px;
                                 top: 10px;
@@ -1515,11 +1513,6 @@ class GameScene extends Phaser.Scene {
                 this.add.image(x + 16, y + 16, 'grass');
             }
         }
-
-        // Create garden border
-        const border = this.add.graphics();
-        border.lineStyle(4, 0x2d4a2b);
-        border.strokeRect(20, 20, 760, 560);
 
         // Create groups for game objects
         this.vegetables = this.physics.add.group();
@@ -2376,15 +2369,11 @@ class GameScene extends Phaser.Scene {
     }
 
     startGame(isNewGame = false) {
-        console.log('startGame called with isNewGame:', isNewGame);
         if (this.gameStarted) {
-            console.log('startGame exiting early - gameStarted is true');
             return; // Prevent multiple starts
         }
         
-        console.log('Starting game...');
         this.gameStarted = true;
-        console.log('gameStarted set to:', this.gameStarted);
         
         // Check current button states to determine if music/sounds should be enabled
         const musicButton = document.getElementById('music-toggle');
@@ -2408,7 +2397,6 @@ class GameScene extends Phaser.Scene {
         if (this.audioContext) {
             if (this.audioContext.state === 'suspended') {
                 this.audioContext.resume().then(() => {
-                    console.log('Audio context resumed');
                     // Only start background music if button indicates it should be on
                     if (musicShouldBeOn) {
                         this.startBackgroundMusic();
@@ -2419,7 +2407,6 @@ class GameScene extends Phaser.Scene {
                     }
                 });
             } else {
-                console.log('Audio context already running');
                 // Only start background music if button indicates it should be on
                 if (musicShouldBeOn) {
                     this.startBackgroundMusic();
@@ -2459,6 +2446,26 @@ class GameScene extends Phaser.Scene {
             this.round = 1;
             this.roundActive = true; // For new games, start active immediately
             this.gamePaused = false;
+            
+            // Reset gardener state for new games
+            if (isNewGame) {
+                this.gardenerAngle = 0;
+                this.lastSprayTime = 0;
+                this.lastSprayAngle = null;
+                this.wasMovingLeft = false;
+                this.wasMovingRight = false;
+                this.wasMovingUp = false;
+                this.wasMovingDown = false;
+                this.wasSpraying = false;
+                
+                // Reset mobile controls
+                this.mobileControls.up = false;
+                this.mobileControls.down = false;
+                this.mobileControls.left = false;
+                this.mobileControls.right = false;
+                this.mobileControls.spray = false;
+                this.mobileControls.sprayJustPressed = false;
+            }
         } else {
             // Game state was loaded, activate immediately for loaded games
             this.roundActive = true;
@@ -2466,15 +2473,12 @@ class GameScene extends Phaser.Scene {
         }
         
         // Timer is now handled manually in update() method
-        console.log('Using manual timer in update loop');
         
         // Immediately update UI to show starting time
         this.updateUI();
         
         // Start the first round
-        console.log('About to call startRound()...');
         this.startRound();
-        console.log('startRound() completed');
         
         // Play start game sound with a slight delay to ensure audio context is ready
         setTimeout(() => {
@@ -2486,20 +2490,15 @@ class GameScene extends Phaser.Scene {
 
     startRound() {
         // Prevent multiple simultaneous calls
-        if (this.roundStarting) {
-            console.log('startRound() called but already in progress, ignoring');
-            return;
-        }
-        
-        this.roundStarting = true;
+            if (this.roundStarting) {
+                return;
+            }        this.roundStarting = true;
         this.vegetablesDropped = false; // Reset the vegetables dropped flag for new round
-        console.log('Starting round', this.round);
+        
         // All rounds now use the delay system
         this.roundActive = false; // Keep inactive until message disappears
-        console.log('Setting roundActive to false for delay');
         
         this.timeLeft = 20;
-        console.log('roundActive set to:', this.roundActive, 'timeLeft set to:', this.timeLeft);
         this.squirrelSpawnRate = Math.max(1000, 3000 - (this.round - 1) * 200);
         this.raccoonSpawnRate = Math.max(4000, 8000 - (this.round - 1) * 300);
         
@@ -2542,20 +2541,19 @@ class GameScene extends Phaser.Scene {
                 const vegetableType = vegetableTypes[Math.floor(Math.random() * vegetableTypes.length)];
                 const vegetable = this.physics.add.sprite(x, y, vegetableType);
                 vegetable.setData('inPlay', true);
+                // Ensure vegetables start with normal appearance
+                vegetable.setScale(1.0);
+                vegetable.setTint(0xffffff);
+                vegetable.setAlpha(1.0);
                 this.vegetables.add(vegetable);
             }
         } else {
             // For subsequent rounds, reactivate any existing vegetables that are still in the field
-            let reactivatedCount = 0;
             this.vegetables.children.entries.forEach((vegetable, index) => {
                 if (vegetable.active && vegetable.visible) {
-                    const wasInPlay = vegetable.getData('inPlay');
                     vegetable.setData('inPlay', true);
-                    reactivatedCount++;
-                    console.log(`Reactivated vegetable ${index} at (${vegetable.x}, ${vegetable.y}) for round ${this.round} (was inPlay: ${wasInPlay})`);
                 }
             });
-            console.log(`Total vegetables reactivated: ${reactivatedCount}`);
         }
         
         // Count remaining vegetables (for all rounds)
@@ -2565,8 +2563,6 @@ class GameScene extends Phaser.Scene {
                 this.vegetablesLeft++;
             }
         });
-        
-        console.log(`Round ${this.round}: Found ${this.vegetablesLeft} vegetables to protect`);
         
         this.updateUI();
         
@@ -2578,9 +2574,7 @@ class GameScene extends Phaser.Scene {
             messageText = `🌱 Round ${this.round} - Here We Go!\n🥕 ${this.vegetablesLeft} vegetables to protect\n⏰ ${this.timeLeft} seconds`;
         }
         
-        console.log('About to show message:', messageText);
-        this.showMessage(messageText, 2000); // Show for 2 seconds
-        console.log('showMessage called');
+        this.showMessage(messageText, 3500); // Show for 3.5 seconds (increased from 2 seconds)
         
         // Only use delay system for subsequent rounds (not round 1)
         // Show "Get Ready!" message briefly before starting
@@ -2597,8 +2591,6 @@ class GameScene extends Phaser.Scene {
             // Re-enable animal-vegetable collision detection for new round
             this.squirrelVegetableCollision.active = true;
             this.raccoonVegetableCollision.active = true;
-            
-            console.log('Round activated! roundActive set to:', this.roundActive);
         });
     }
 
@@ -2646,8 +2638,6 @@ class GameScene extends Phaser.Scene {
                 this.timeLeft--;
                 this.updateUI();
                 this.lastTimerUpdate = time;
-                
-                console.log('Manual timer update - timeLeft:', this.timeLeft);
                 
                 // Don't immediately end round here - let the main round end logic handle it
                 // This allows for proper vegetable dropping when timer expires
@@ -3127,18 +3117,14 @@ class GameScene extends Phaser.Scene {
             }
         }
 
-        // Update squirrels (skip if stopped)
+        // Update squirrels
         this.squirrels.children.entries.forEach(squirrel => {
-            if (squirrel.getData('state') !== 'stopped') {
-                this.updateSquirrel(squirrel);
-            }
+            this.updateSquirrel(squirrel);
         });
 
-        // Update raccoons (skip if stopped)
+        // Update raccoons
         this.raccoons.children.entries.forEach(raccoon => {
-            if (raccoon.getData('state') !== 'stopped') {
-                this.updateRaccoon(raccoon);
-            }
+            this.updateRaccoon(raccoon);
         });
 
         // Only check win/lose conditions when round is active
@@ -3154,35 +3140,28 @@ class GameScene extends Phaser.Scene {
             // Simple round end logic
             if (this.timeLeft <= 0) {
                 // Time expired - always drop any carried vegetables first (but only once)
-                if (vegetablesBeingCarried > 0 && !this.vegetablesDropped) {
-                    console.log(`Time expired - dropping ${vegetablesBeingCarried} carried vegetables`);
-                    this.vegetablesDropped = true; // Set flag to prevent multiple drops
+                if (!this.vegetablesDropped) {
+                    // Check for carried vegetables atomically within the drop function
+                    const dropResult = this.dropAllCarriedVegetables();
                     
-                    // Disable animal-vegetable collision detection to prevent re-grabbing
-                    this.squirrelVegetableCollision.active = false;
-                    this.raccoonVegetableCollision.active = false;
-                    
-                    // Stop all animal movement and collision detection before dropping vegetables
-                    this.squirrels.children.entries.forEach(squirrel => {
-                        squirrel.setVelocity(0);
-                        squirrel.setData('state', 'stopped');
-                    });
-                    this.raccoons.children.entries.forEach(raccoon => {
-                        raccoon.setVelocity(0);
-                        raccoon.setData('state', 'stopped');
-                    });
-                    
-                    this.dropAllCarriedVegetables();
-                    
-                    // Wait a moment for vegetables to be properly registered, then end round
-                    this.time.delayedCall(100, () => {
-                        console.log(`Time expired - ending round after dropping vegetables`);
+                    if (dropResult.totalProcessed > 0) {
+                        console.log(`Time expired - processed ${dropResult.totalProcessed} carried vegetables (${dropResult.dropped} dropped, ${dropResult.lost} lost)`);
+                        this.vegetablesDropped = true; // Set flag to prevent multiple drops
+                        
+                        // Disable animal-vegetable collision detection to prevent re-grabbing
+                        this.squirrelVegetableCollision.active = false;
+                        this.raccoonVegetableCollision.active = false;
+                        
+                        // Wait a moment for vegetables to be properly registered, then end round
+                        this.time.delayedCall(100, () => {
+                            console.log(`Time expired - ending round after dropping vegetables`);
+                            this.endRound();
+                        });
+                    } else {
+                        // No vegetables were actually being carried, end round immediately
+                        console.log(`Time expired - no vegetables being carried, ending round`);
                         this.endRound();
-                    });
-                } else if (vegetablesBeingCarried === 0 && !this.roundEnding) {
-                    // No vegetables being carried or already dropped, end round
-                    console.log(`Time expired - ending round`);
-                    this.endRound();
+                    }
                 }
             } else if (totalVegetablesInPlay === 0) {
                 // All vegetables gone before time expired
@@ -3203,7 +3182,6 @@ class GameScene extends Phaser.Scene {
             const targetVegetable = squirrel.getData('targetVegetable');
             if (targetVegetable && targetVegetable.active) {
                 carriedCount++;
-                console.log(`DEBUG: Squirrel ${index} carrying vegetable at (${targetVegetable.x}, ${targetVegetable.y}), squirrel at (${squirrel.x}, ${squirrel.y})`);
             }
         });
         
@@ -3212,12 +3190,8 @@ class GameScene extends Phaser.Scene {
             const carriedVegetables = raccoon.getData('carriedVegetables') || [];
             const activeCarried = carriedVegetables.filter(veg => veg && veg.active);
             carriedCount += activeCarried.length;
-            if (activeCarried.length > 0) {
-                console.log(`DEBUG: Raccoon ${index} carrying ${activeCarried.length} vegetables at (${raccoon.x}, ${raccoon.y})`);
-            }
         });
         
-        console.log(`DEBUG: countVegetablesBeingCarried() returning: ${carriedCount}`);
         return carriedCount;
     }
 
@@ -3225,12 +3199,13 @@ class GameScene extends Phaser.Scene {
         let droppedCount = 0;
         let lostCount = 0;
         
-        // Define play boundaries
+        // Define play boundaries - use generous bounds that match the actual playable area
+        // Game canvas is 800x600, so use slightly smaller bounds to account for sprite sizes
         const playBounds = {
-            left: 50,
-            right: 750,
-            top: 50,
-            bottom: 550
+            left: 20,
+            right: 780,
+            top: 20,
+            bottom: 580
         };
         
         // Drop vegetables carried by squirrels
@@ -3251,29 +3226,36 @@ class GameScene extends Phaser.Scene {
                     targetVegetable.setVisible(false);
                     targetVegetable.setActive(false);
                     lostCount++;
-                    console.log(`Vegetable lost - squirrel at (${squirrel.x}, ${squirrel.y}) outside play boundaries, vegetable marked as out of play`);
                 } else {
-                    // Animal is within boundaries - drop vegetable normally
-                    targetVegetable.x = Math.max(playBounds.left, Math.min(playBounds.right, squirrel.x));
-                    targetVegetable.y = Math.max(playBounds.top, Math.min(playBounds.bottom, squirrel.y));
-                    targetVegetable.setData('inPlay', true);
-                    targetVegetable.setVisible(true);
-                    targetVegetable.setActive(true);
-                    targetVegetable.alpha = 1; // Ensure full opacity
-                    
-                    // Ensure it has a physics body and is enabled
-                    if (targetVegetable.body) {
-                        targetVegetable.body.enable = true;
+                    // Animal is within boundaries - drop vegetable where it currently is
+                    // Check if vegetable itself is outside bounds - if so, it's lost
+                    if (targetVegetable.x < playBounds.left || targetVegetable.x > playBounds.right ||
+                        targetVegetable.y < playBounds.top || targetVegetable.y > playBounds.bottom) {
+                        // Vegetable is outside bounds - mark as lost
+                        targetVegetable.setData('inPlay', false);
+                        targetVegetable.setVisible(false);
+                        targetVegetable.setActive(false);
+                        lostCount++;
+                    } else {
+                        // Vegetable is within bounds - keep it in play
+                        targetVegetable.setData('inPlay', true);
+                        targetVegetable.setVisible(true);
+                        targetVegetable.setActive(true);
+                        targetVegetable.alpha = 1; // Ensure full opacity
+                        
+                        // Ensure it has a physics body and is enabled
+                        if (targetVegetable.body) {
+                            targetVegetable.body.enable = true;
+                        }
+                        
+                        // Make sure it's part of the vegetables group
+                        const wasInGroup = this.vegetables.contains(targetVegetable);
+                        if (!wasInGroup) {
+                            this.vegetables.add(targetVegetable);
+                        }
+                        
+                        droppedCount++;
                     }
-                    
-                    // Make sure it's part of the vegetables group
-                    const wasInGroup = this.vegetables.contains(targetVegetable);
-                    if (!wasInGroup) {
-                        this.vegetables.add(targetVegetable);
-                    }
-                    
-                    droppedCount++;
-                    console.log(`Dropped squirrel vegetable at (${targetVegetable.x}, ${targetVegetable.y}) [was at squirrel position (${squirrel.x}, ${squirrel.y})], visible: ${targetVegetable.visible}, active: ${targetVegetable.active}, inPlay: ${targetVegetable.getData('inPlay')}, wasInGroup: ${wasInGroup}, nowInGroup: ${this.vegetables.contains(targetVegetable)}`);
                 }
             }
         });
@@ -3299,29 +3281,41 @@ class GameScene extends Phaser.Scene {
                         vegetable.setVisible(false);
                         vegetable.setActive(false);
                         lostCount++;
-                        console.log(`Vegetable lost - raccoon at (${raccoon.x}, ${raccoon.y}) outside play boundaries, vegetable marked as out of play`);
                     } else {
-                        // Animal is within boundaries - drop vegetable normally
-                        vegetable.x = Math.max(playBounds.left, Math.min(playBounds.right, raccoon.x));
-                        vegetable.y = Math.max(playBounds.top, Math.min(playBounds.bottom, raccoon.y));
-                        vegetable.setData('inPlay', true);
-                        vegetable.setVisible(true);
-                        vegetable.setActive(true);
-                        vegetable.alpha = 1; // Ensure full opacity
-                        
-                        // Ensure it has a physics body and is enabled
-                        if (vegetable.body) {
-                            vegetable.body.enable = true;
+                        // Animal is within boundaries - drop vegetable where it currently is
+                        // Check if vegetable itself is outside bounds - if so, it's lost
+                        if (vegetable.x < playBounds.left || vegetable.x > playBounds.right ||
+                            vegetable.y < playBounds.top || vegetable.y > playBounds.bottom) {
+                            // Vegetable is outside bounds - mark as lost
+                            vegetable.setData('inPlay', false);
+                            vegetable.setVisible(false);
+                            vegetable.setActive(false);
+                            lostCount++;
+                        } else {
+                            // Vegetable is within bounds - keep it in play
+                            vegetable.setData('inPlay', true);
+                            vegetable.setVisible(true);
+                            vegetable.setActive(true);
+                            vegetable.alpha = 1; // Ensure full opacity
+                            
+                            // Reset vegetable appearance to normal when dropped
+                            vegetable.setScale(1.0);
+                            vegetable.setTint(0xffffff);
+                            vegetable.setAlpha(1.0);
+                            
+                            // Ensure it has a physics body and is enabled
+                            if (vegetable.body) {
+                                vegetable.body.enable = true;
+                            }
+                            
+                            // Make sure it's part of the vegetables group
+                            const wasInGroup = this.vegetables.contains(vegetable);
+                            if (!wasInGroup) {
+                                this.vegetables.add(vegetable);
+                            }
+                            
+                            droppedCount++;
                         }
-                        
-                        // Make sure it's part of the vegetables group
-                        const wasInGroup = this.vegetables.contains(vegetable);
-                        if (!wasInGroup) {
-                            this.vegetables.add(vegetable);
-                        }
-                        
-                        droppedCount++;
-                        console.log(`Dropped raccoon vegetable at (${vegetable.x}, ${vegetable.y}) [was at raccoon position (${raccoon.x}, ${raccoon.y})], visible: ${vegetable.visible}, active: ${vegetable.active}, inPlay: ${vegetable.getData('inPlay')}, wasInGroup: ${wasInGroup}, nowInGroup: ${this.vegetables.contains(vegetable)}`);
                     }
                 }
             });
@@ -3329,43 +3323,29 @@ class GameScene extends Phaser.Scene {
         
         console.log(`Dropped ${droppedCount} vegetables back into the play field, ${lostCount} vegetables lost outside boundaries`);
         
-        // Capture immediate post-drop positions for debugging
-        console.log('=== IMMEDIATE POST-DROP POSITIONS ===');
-        this.vegetables.children.entries.forEach((vegetable, index) => {
-            if (vegetable.active && vegetable.getData('inPlay')) {
-                console.log(`Post-drop V${index}: (${vegetable.x}, ${vegetable.y})`);
-            }
-        });
-        
         // Update the vegetable count immediately
         this.updateVegetableCount();
         
         // Force a UI update to reflect the new vegetable count
         this.updateUI();
         
-        // Add a small delay to check for any physics-induced position changes
-        this.time.delayedCall(100, () => {
-            console.log('=== POSITIONS AFTER 100ms (physics settle) ===');
-            this.vegetables.children.entries.forEach((vegetable, index) => {
-                if (vegetable.active && vegetable.getData('inPlay')) {
-                    console.log(`After-physics V${index}: (${vegetable.x}, ${vegetable.y})`);
-                }
-            });
-        });
+        // Return result information for atomic processing
+        return {
+            dropped: droppedCount,
+            lost: lostCount,
+            totalProcessed: droppedCount + lostCount
+        };
     }
     
     updateVegetableCount() {
         this.vegetablesLeft = 0;
-        let debugInfo = [];
         this.vegetables.children.entries.forEach((vegetable, index) => {
             const active = vegetable.active;
             const inPlay = vegetable.getData('inPlay');
-            debugInfo.push(`V${index}: active=${active}, inPlay=${inPlay}`);
             if (active && inPlay) {
                 this.vegetablesLeft++;
             }
         });
-        console.log(`Updated vegetable count: ${this.vegetablesLeft} vegetables in play (${debugInfo.join(', ')})`);
     }
 
     sprayWater() {
@@ -3487,25 +3467,55 @@ class GameScene extends Phaser.Scene {
         }
         
         if (state === 'seeking') {
-            // Find nearest vegetable
+            // Only look for vegetables if collision detection is active (round is active)
             let nearestVegetable = null;
             let nearestDistance = Infinity;
             
-            this.vegetables.children.entries.forEach(vegetable => {
-                if (vegetable.getData('inPlay')) {
-                    const distance = Phaser.Math.Distance.Between(
-                        squirrel.x, squirrel.y, vegetable.x, vegetable.y
-                    );
-                    if (distance < nearestDistance) {
-                        nearestDistance = distance;
-                        nearestVegetable = vegetable;
+            if (this.squirrelVegetableCollision.active) {
+                this.vegetables.children.entries.forEach(vegetable => {
+                    if (vegetable.getData('inPlay')) {
+                        const distance = Phaser.Math.Distance.Between(
+                            squirrel.x, squirrel.y, vegetable.x, vegetable.y
+                        );
+                        if (distance < nearestDistance) {
+                            nearestDistance = distance;
+                            nearestVegetable = vegetable;
+                        }
                     }
-                }
-            });
+                });
+            }
 
-            if (nearestVegetable) {
+            if (nearestVegetable && this.squirrelVegetableCollision.active) {
                 squirrel.setData('targetVegetable', nearestVegetable);
                 this.physics.moveToObject(squirrel, nearestVegetable, this.squirrelSeekSpeed);
+                isMoving = true;
+            } else {
+                // No vegetables found or collision detection disabled - wander toward edge to leave
+                // Continue any existing movement or start wandering toward edge
+                if (!squirrel.body.velocity.x && !squirrel.body.velocity.y) {
+                    // Start new movement toward nearest edge to leave the screen
+                    const centerX = 400, centerY = 300;
+                    const dirX = squirrel.x - centerX;
+                    const dirY = squirrel.y - centerY;
+                    const length = Math.sqrt(dirX * dirX + dirY * dirY);
+                    
+                    if (length > 0) {
+                        // Move toward edge in current direction from center
+                        const wanderSpeed = this.squirrelSeekSpeed * 0.8; // Decent speed toward edge
+                        squirrel.setVelocity(
+                            (dirX / length) * wanderSpeed,
+                            (dirY / length) * wanderSpeed
+                        );
+                    } else {
+                        // Fallback: random direction if exactly at center
+                        const wanderAngle = Math.random() * Math.PI * 2;
+                        const wanderSpeed = this.squirrelSeekSpeed * 0.8;
+                        squirrel.setVelocity(
+                            Math.cos(wanderAngle) * wanderSpeed,
+                            Math.sin(wanderAngle) * wanderSpeed
+                        );
+                    }
+                }
                 isMoving = true;
             }
         } else if (state === 'goingToTap') {
@@ -3557,11 +3567,16 @@ class GameScene extends Phaser.Scene {
                 isMoving = true;
             }
 
-            // Move vegetable with squirrel (with small offset so it's visible)
+            // Move vegetable with squirrel (with larger offset so it's more visible)
             const vegetable = squirrel.getData('targetVegetable');
             if (vegetable && vegetable.active) {
-                vegetable.x = squirrel.x + 8; // Small offset to the right
-                vegetable.y = squirrel.y - 8; // Small offset upward
+                vegetable.x = squirrel.x + 12; // Larger offset to the right for better visibility
+                vegetable.y = squirrel.y - 12; // Larger offset upward for better visibility
+                
+                // Make carried vegetable more visible with enhanced appearance
+                vegetable.setScale(1.2); // Slightly larger scale
+                vegetable.setTint(0xffffff); // Ensure no tint is applied
+                vegetable.setAlpha(1.0); // Ensure full opacity
             }
 
             // Check if squirrel reached edge
@@ -3608,9 +3623,16 @@ class GameScene extends Phaser.Scene {
             // Move any currently carried vegetables with raccoon while seeking more
             carriedVegetables.forEach((vegetable, index) => {
                 if (vegetable && vegetable.active) {
-                    const offsetX = index === 0 ? -8 : 8;
+                    // Enhanced positioning for better visibility
+                    const offsetX = index === 0 ? -15 : 15; // Increased from -8/8 to -15/15
+                    const offsetY = -10; // Add upward offset to make vegetables more visible
                     vegetable.x = raccoon.x + offsetX;
-                    vegetable.y = raccoon.y;
+                    vegetable.y = raccoon.y + offsetY;
+                    
+                    // Enhanced appearance for carried vegetables
+                    vegetable.setScale(1.2); // Slightly larger scale
+                    vegetable.setTint(0xffffff); // Ensure no tint is applied
+                    vegetable.setAlpha(1.0); // Ensure full opacity
                 }
             });
             
@@ -3619,19 +3641,22 @@ class GameScene extends Phaser.Scene {
                 let nearestVegetable = null;
                 let nearestDistance = Infinity;
                 
-                this.vegetables.children.entries.forEach(vegetable => {
-                    if (vegetable.getData('inPlay')) {
-                        const distance = Phaser.Math.Distance.Between(
-                            raccoon.x, raccoon.y, vegetable.x, vegetable.y
-                        );
-                        if (distance < nearestDistance) {
-                            nearestDistance = distance;
-                            nearestVegetable = vegetable;
+                // Only look for vegetables if collision detection is active
+                if (this.raccoonVegetableCollision.active) {
+                    this.vegetables.children.entries.forEach(vegetable => {
+                        if (vegetable.getData('inPlay')) {
+                            const distance = Phaser.Math.Distance.Between(
+                                raccoon.x, raccoon.y, vegetable.x, vegetable.y
+                            );
+                            if (distance < nearestDistance) {
+                                nearestDistance = distance;
+                                nearestVegetable = vegetable;
+                            }
                         }
-                    }
-                });
+                    });
+                }
 
-                if (nearestVegetable) {
+                if (nearestVegetable && this.raccoonVegetableCollision.active) {
                     raccoon.setData('targetVegetable', nearestVegetable);
                     this.physics.moveToObject(raccoon, nearestVegetable, this.raccoonSeekSpeed);
                     isMoving = true;
@@ -3639,6 +3664,33 @@ class GameScene extends Phaser.Scene {
                     // No more vegetables to find, but we have some - start carrying them away
                     raccoon.setData('state', 'carrying');
                     raccoon.setData('targetVegetable', null);
+                } else {
+                    // No vegetables found or collision detection disabled - move toward edge to leave
+                    if (!raccoon.body.velocity.x && !raccoon.body.velocity.y) {
+                        // Move toward nearest edge to leave the screen
+                        const centerX = 400, centerY = 300;
+                        const dirX = raccoon.x - centerX;
+                        const dirY = raccoon.y - centerY;
+                        const length = Math.sqrt(dirX * dirX + dirY * dirY);
+                        
+                        if (length > 0) {
+                            // Move toward edge in current direction from center
+                            const wanderSpeed = this.raccoonSeekSpeed * 0.8; // Decent speed toward edge
+                            raccoon.setVelocity(
+                                (dirX / length) * wanderSpeed,
+                                (dirY / length) * wanderSpeed
+                            );
+                        } else {
+                            // Fallback: random direction if exactly at center
+                            const wanderAngle = Math.random() * Math.PI * 2;
+                            const wanderSpeed = this.raccoonSeekSpeed * 0.8;
+                            raccoon.setVelocity(
+                                Math.cos(wanderAngle) * wanderSpeed,
+                                Math.sin(wanderAngle) * wanderSpeed
+                            );
+                        }
+                    }
+                    isMoving = true;
                 }
             } else {
                 // If raccoon has 2 vegetables, start carrying them away
@@ -3663,13 +3715,19 @@ class GameScene extends Phaser.Scene {
                 isMoving = true;
             }
 
-            // Move vegetables with raccoon
+            // Move vegetables with raccoon with enhanced visibility
             carriedVegetables.forEach((vegetable, index) => {
                 if (vegetable && vegetable.active) {
-                    // Offset vegetables slightly so they're visible
-                    const offsetX = index === 0 ? -8 : 8;
+                    // Larger offsets for better visibility
+                    const offsetX = index === 0 ? -15 : 15; // Increased from -8/8 to -15/15
+                    const offsetY = -10; // Add upward offset to make vegetables more visible
                     vegetable.x = raccoon.x + offsetX;
-                    vegetable.y = raccoon.y;
+                    vegetable.y = raccoon.y + offsetY;
+                    
+                    // Enhanced appearance for carried vegetables
+                    vegetable.setScale(1.2); // Slightly larger scale
+                    vegetable.setTint(0xffffff); // Ensure no tint is applied
+                    vegetable.setAlpha(1.0); // Ensure full opacity
                 }
             });
 
@@ -3824,6 +3882,10 @@ class GameScene extends Phaser.Scene {
         const vegetable = squirrel.getData('targetVegetable');
         if (vegetable && vegetable.active) {
             vegetable.setData('inPlay', true);
+            // Reset vegetable appearance to normal when dropped
+            vegetable.setScale(1.0);
+            vegetable.setTint(0xffffff);
+            vegetable.setAlpha(1.0);
         }
         
         squirrel.setData('state', 'fleeing');
@@ -3842,6 +3904,10 @@ class GameScene extends Phaser.Scene {
         carriedVegetables.forEach(vegetable => {
             if (vegetable && vegetable.active) {
                 vegetable.setData('inPlay', true);
+                // Reset vegetable appearance to normal when dropped
+                vegetable.setScale(1.0);
+                vegetable.setTint(0xffffff);
+                vegetable.setAlpha(1.0);
             }
         });
         
@@ -3978,10 +4044,8 @@ class GameScene extends Phaser.Scene {
     }
 
     updateTimer() {
-        console.log('Timer called - gameStarted:', this.gameStarted, 'roundActive:', this.roundActive, 'gamePaused:', this.gamePaused);
         if (this.gameStarted && this.roundActive && !this.gamePaused) {
             this.timeLeft--;
-            console.log('Timer decremented to:', this.timeLeft);
             this.updateUI();
             
             // Don't call endRound here - let the main update logic handle it
@@ -3991,12 +4055,17 @@ class GameScene extends Phaser.Scene {
     endRound() {
         // Prevent multiple simultaneous calls
         if (this.roundEnding) {
-            console.log('endRound() called but already in progress, ignoring');
             return;
         }
         
         this.roundEnding = true;
         this.roundActive = false;
+        
+        // Disable animal-vegetable collision detection during round transition (if not already disabled)
+        if (this.squirrelVegetableCollision.active) {
+            this.squirrelVegetableCollision.active = false;
+            this.raccoonVegetableCollision.active = false;
+        }
         
         // First, make sure we have the most up-to-date vegetable count
         this.updateVegetableCount();
@@ -4017,26 +4086,6 @@ class GameScene extends Phaser.Scene {
         const totalVegetablesInPlay = vegetablesInField + vegetablesBeingCarried;
         const roundEndedByVegetables = totalVegetablesInPlay === 0;
         
-        console.log(`Round ${this.round} ended:`, 
-            roundEndedByTime ? 'Time expired' : 'All vegetables saved/taken', 
-            `VegetablesInField: ${vegetablesInField}, BeingCarried: ${vegetablesBeingCarried}, Total: ${totalVegetablesInPlay}, Score gained: ${pointsScored}`);
-        
-        // Debug: Check positions right before final status
-        console.log('=== POSITIONS AT ROUND END ===');
-        this.vegetables.children.entries.forEach((vegetable, index) => {
-            if (vegetable.active && vegetable.getData('inPlay')) {
-                console.log(`Round-end V${index}: (${vegetable.x}, ${vegetable.y})`);
-            }
-        });
-        
-        // Debug: List all vegetables and their states
-        console.log('=== All vegetables status ===');
-        this.vegetables.children.entries.forEach((veg, index) => {
-            console.log(`Vegetable ${index}: active=${veg.active}, visible=${veg.visible}, inPlay=${veg.getData('inPlay')}, position=(${veg.x}, ${veg.y})`);
-        });
-        
-        console.log(`DEBUG: About to create round end message - this.round=${this.round}, pointsScored=${pointsScored}`);
-        
         // Show round end notification
         let roundEndMessage;
         if (roundEndedByTime) {
@@ -4049,12 +4098,10 @@ class GameScene extends Phaser.Scene {
             }
         }
         
-        console.log(`DEBUG: Created round end message: "${roundEndMessage}"`);
-        this.showMessage(roundEndMessage, 3000);
+        this.showMessage(roundEndMessage, 4000); // Show for 4 seconds (increased from 3 seconds)
         
         // Check for game over: only if no vegetables saved AND no vegetables remain for next round AND time didn't expire
         if (pointsScored === 0 && totalVegetablesInPlay === 0 && this.timeLeft > 0) {
-            console.log('=== GAME OVER: All vegetables stolen and none remain ===');
             this.gameOver();
             return;
         }
@@ -4081,7 +4128,6 @@ class GameScene extends Phaser.Scene {
     }
 
     gameOver() {
-        console.log('Game Over triggered');
         
         // Set game over state
         this.gameStarted = false;

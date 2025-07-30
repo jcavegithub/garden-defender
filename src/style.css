@@ -368,9 +368,9 @@ canvas {
 /* Top 3 High Scores Display */
 #top-scores-display {
   width: 100%;
-  max-width: 250px; /* Reduced from 300px to 250px for better mobile fit */
+  max-width: 200px; /* Restored to a more reasonable size from 80px */
   margin: 10px auto 0 auto;
-  padding: 6px 12px; /* Reduced padding from 8px 15px */
+  padding: 6px 12px; /* Restored more comfortable padding */
   background: linear-gradient(135deg, rgba(74, 103, 65, 0.9), rgba(45, 74, 43, 0.8));
   border-radius: 10px;
   border: 2px solid rgba(255, 215, 0, 0.3);
@@ -382,38 +382,42 @@ canvas {
   flex-direction: column; /* Changed from row to column for vertical stacking */
   justify-content: center;
   align-items: center;
-  gap: 6px; /* Increased gap for vertical spacing */
+  gap: 6px; /* Restored comfortable spacing */
 }
 
 .top-score-item {
   display: flex;
   flex-direction: row; /* Changed to row for horizontal layout within each item */
   align-items: center;
-  text-align: left; /* Changed from center to left */
+  justify-content: center; /* Center the content horizontally */
+  text-align: center; /* Center the text */
   width: 100%; /* Take full width */
-  padding: 4px 8px; /* Added padding for better spacing */
+  padding: 4px 8px; /* Restored comfortable padding */
   background: rgba(0, 0, 0, 0.2); /* Added subtle background */
   border-radius: 6px; /* Added border radius */
 }
 
 .rank-icon {
-  font-size: 20px;
-  margin-right: 8px; /* Changed from margin-bottom to margin-right */
+  font-size: 18px; /* Restored to comfortable icon size */
+  margin-right: 6px; /* Restored comfortable margin */
   margin-bottom: 0; /* Reset bottom margin */
   display: block;
   flex-shrink: 0; /* Prevent icon from shrinking */
+  width: 20px; /* Restored comfortable width for alignment */
+  text-align: center; /* Center the icon within its container */
 }
 
 .score-info {
   color: white;
-  font-size: 11px; /* Slightly increased font size */
+  font-size: 11px; /* Restored readable font size */
   font-weight: bold;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-  line-height: 1.3; /* Increased line height for better readability */
+  line-height: 1.3; /* Restored comfortable line height */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1; /* Take remaining space */
+  text-align: center; /* Center the score text */
 }
 
 .score-info.no-score {
@@ -898,25 +902,25 @@ body:not(.game-started):not(.game-over) #start-screen {
   /* Mobile top scores styling */
   #top-scores-display {
     margin: 5px auto 0 auto;
-    padding: 4px 8px; /* Reduced padding from 6px 12px */
-    max-width: 90%; /* Use percentage for better mobile responsiveness */
+    padding: 5px 10px; /* Comfortable mobile padding */
+    max-width: 180px; /* Slightly smaller for mobile but still readable */
   }
   
   .rank-icon {
-    font-size: 16px;
-    margin-right: 6px; /* Adjusted for mobile */
+    font-size: 16px; /* Comfortable mobile icon size */
+    margin-right: 5px; /* Comfortable mobile margin */
   }
   
   .score-info {
-    font-size: 9px; /* Slightly smaller for mobile */
+    font-size: 10px; /* Readable mobile text size */
   }
   
   .score-info.no-score {
-    font-size: 8px;
+    font-size: 9px;
   }
   
   .top-score-item {
-    padding: 3px 6px; /* Reduced padding for mobile */
+    padding: 3px 6px; /* Comfortable mobile padding */
   }
   
   #game-stats {
