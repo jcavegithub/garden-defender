@@ -1532,12 +1532,13 @@ class GameScene extends Phaser.Scene {
         this.gardenerLeftLeg = this.add.sprite(400, 300, 'gardener-leg');
         this.gardenerRightLeg = this.add.sprite(400, 300, 'gardener-leg');
         
-        // Set limb depths - legs behind body, arms in front
-        this.gardenerLeftLeg.setDepth(0);
-        this.gardenerRightLeg.setDepth(0);
-        this.gardener.setDepth(1); // Main body above legs
-        this.gardenerLeftArm.setDepth(2);
-        this.gardenerRightArm.setDepth(2);
+        // Set limb depths - all gardener parts above animals and vegetables
+        // Animals and vegetables are depth 1, carried vegetables are depth 3
+        this.gardenerLeftLeg.setDepth(4);  // Legs above carried vegetables
+        this.gardenerRightLeg.setDepth(4); 
+        this.gardener.setDepth(5);         // Main body above legs
+        this.gardenerLeftArm.setDepth(6);  // Arms above body
+        this.gardenerRightArm.setDepth(6);
         
         // Create spray direction indicator (small arrow that rotates)
         this.sprayIndicator = this.add.graphics();
@@ -1754,6 +1755,11 @@ class GameScene extends Phaser.Scene {
         
         // Handle orientation changes
         const handleOrientationChange = () => {
+            console.log('MOBILE: Orientation change detected');
+            console.log('Vegetables count at orientation change:', this.vegetables ? this.vegetables.children.entries.length : 'N/A');
+            console.log('Game state:', this.gameState);
+            console.log('Round transition active:', this.roundTransition);
+            
             this.isLandscape = window.innerWidth > window.innerHeight;
             this.isPortrait = window.innerHeight > window.innerWidth;
             // No longer showing rotation prompts - users can use any orientation
@@ -1767,6 +1773,23 @@ class GameScene extends Phaser.Scene {
         
         // Initial orientation check
         handleOrientationChange();
+        
+        // Add page visibility monitoring for mobile debugging
+        if (this.isMobile) {
+            document.addEventListener('visibilitychange', () => {
+                console.log('MOBILE: Page visibility changed to:', document.visibilityState);
+                console.log('Document hidden:', document.hidden);
+                console.log('Vegetables count at visibility change:', this.vegetables ? this.vegetables.children.entries.length : 'N/A');
+                console.log('Game state:', this.gameState);
+                console.log('Round transition active:', this.roundTransition);
+            });
+            
+            // Monitor for performance issues
+            if ('performance' in window && 'now' in window.performance) {
+                this.lastFrameTime = performance.now();
+                this.frameDropCount = 0;
+            }
+        }
         
         // Add fullscreen capabilities for mobile
         this.setupFullscreenMobile();
@@ -2139,11 +2162,15 @@ class GameScene extends Phaser.Scene {
                 
                 // Focus/blur events to handle keyboard/address bar changes
                 window.addEventListener('focus', () => {
+                    console.log('MOBILE: Window focus event triggered');
+                    console.log('Vegetables count at focus:', this.vegetables ? this.vegetables.children.entries.length : 'N/A');
                     setTimeout(setViewportHeight, 100);
                     setTimeout(scrollToHide, 150);
                 });
                 
                 window.addEventListener('blur', () => {
+                    console.log('MOBILE: Window blur event triggered');
+                    console.log('Vegetables count at blur:', this.vegetables ? this.vegetables.children.entries.length : 'N/A');
                     setTimeout(setViewportHeight, 100);
                 });
             }
@@ -2545,6 +2572,7 @@ class GameScene extends Phaser.Scene {
                 vegetable.setScale(1.0);
                 vegetable.setTint(0xffffff);
                 vegetable.setAlpha(1.0);
+                vegetable.setDepth(1); // Set default depth (same as animal body)
                 this.vegetables.add(vegetable);
             }
         } else {
@@ -2667,6 +2695,22 @@ class GameScene extends Phaser.Scene {
     update(time, delta) {
         // Don't update anything if game hasn't started
         if (!this.gameStarted) return;
+        
+        // Mobile performance monitoring
+        if (this.isMobile && this.lastFrameTime && 'performance' in window) {
+            const currentTime = performance.now();
+            const frameDelta = currentTime - this.lastFrameTime;
+            
+            // Detect frame drops (over 33ms = under 30fps)
+            if (frameDelta > 33) {
+                this.frameDropCount++;
+                if (this.frameDropCount % 10 === 0) { // Log every 10th frame drop
+                    console.log(`MOBILE: Frame drop detected! Delta: ${frameDelta.toFixed(1)}ms, Total drops: ${this.frameDropCount}`);
+                    console.log('Vegetables count during frame drop:', this.vegetables ? this.vegetables.children.entries.length : 'N/A');
+                }
+            }
+            this.lastFrameTime = currentTime;
+        }
         
         // Manual timer handling (more reliable than Phaser timer events)
         if (this.roundActive && !this.gamePaused) {
@@ -3248,13 +3292,23 @@ class GameScene extends Phaser.Scene {
         let droppedCount = 0;
         let lostCount = 0;
         
-        // Define play boundaries - use generous bounds that match the actual playable area
-        // Game canvas is 800x600, so use slightly smaller bounds to account for sprite sizes
+        // Mobile-specific debugging
+        console.log('=== DROPPING ALL CARRIED VEGETABLES ===');
+        console.log('Mobile device detected:', this.isMobile);
+        console.log('Document hidden:', document.hidden);
+        console.log('Page visibility:', document.visibilityState);
+        console.log('Window focused:', document.hasFocus());
+        console.log('Visual viewport height:', window.visualViewport ? window.visualViewport.height : 'N/A');
+        console.log('Window inner height:', window.innerHeight);
+        console.log('Total vegetables before drop:', this.vegetables.children.entries.length);
+        
+        // Define play boundaries - use full canvas edges
+        // Game canvas is 800x600, so use exact canvas boundaries
         const playBounds = {
-            left: 20,
-            right: 780,
-            top: 20,
-            bottom: 580
+            left: 0,
+            right: 800,
+            top: 0,
+            bottom: 600
         };
         
         // Track processed vegetables to prevent double-processing
@@ -3339,6 +3393,7 @@ class GameScene extends Phaser.Scene {
                         }
                         
                         targetVegetable.alpha = 1; // Ensure full opacity
+                        targetVegetable.setDepth(1); // Reset depth to default (same as animal body)
                         
                         // Ensure it has a physics body and is enabled
                         if (targetVegetable.body) {
@@ -3459,6 +3514,7 @@ class GameScene extends Phaser.Scene {
                             vegetable.setScale(1.0);
                             vegetable.setTint(0xffffff);
                             vegetable.setAlpha(1.0);
+                            vegetable.setDepth(1); // Reset depth to default (same as animal body)
                             
                             // Ensure it has a physics body and is enabled
                             if (vegetable.body) {
@@ -3586,6 +3642,7 @@ class GameScene extends Phaser.Scene {
         squirrel.setData('state', 'seeking'); // seeking, carrying, fleeing, goingToTap
         squirrel.setData('tapCooldown', 0); // Prevent immediate tap usage
         squirrel.setData('animationTimer', 0); // For movement animation
+        squirrel.setDepth(1); // Set depth same as animal body
         this.squirrels.add(squirrel);
     }
 
@@ -3618,6 +3675,7 @@ class GameScene extends Phaser.Scene {
         raccoon.setData('targetVegetable', null);
         raccoon.setData('state', 'seeking'); // seeking, carrying, fleeing
         raccoon.setData('animationTimer', 0); // For movement animation
+        raccoon.setDepth(1); // Set depth same as animal body
         this.raccoons.add(raccoon);
     }
 
@@ -3748,10 +3806,11 @@ class GameScene extends Phaser.Scene {
                 vegetable.setScale(1.2); // Slightly larger scale
                 vegetable.setTint(0xffffff); // Ensure no tint is applied
                 vegetable.setAlpha(1.0); // Ensure full opacity
+                vegetable.setDepth(3); // Set depth above animals (animals are depth 1, arms are depth 2)
             }
 
-            // Check if squirrel reached edge - use same boundaries as round end drop logic
-            if (squirrel.x < 20 || squirrel.x > 780 || squirrel.y < 20 || squirrel.y > 580) {
+            // Check if squirrel reached edge - use full canvas boundaries
+            if (squirrel.x < 0 || squirrel.x > 800 || squirrel.y < 0 || squirrel.y > 600) {
                 this.squirrelEscape(squirrel);
             }
         } else if (state === 'fleeing') {
@@ -3804,6 +3863,7 @@ class GameScene extends Phaser.Scene {
                     vegetable.setScale(1.2); // Slightly larger scale
                     vegetable.setTint(0xffffff); // Ensure no tint is applied
                     vegetable.setAlpha(1.0); // Ensure full opacity
+                    vegetable.setDepth(3); // Set depth above animals (animals are depth 1, arms are depth 2)
                 }
             });
             
@@ -3869,9 +3929,9 @@ class GameScene extends Phaser.Scene {
                 raccoon.setData('targetVegetable', null);
             }
             
-            // Check if raccoon reached edge while seeking (carrying vegetables) - use same boundaries as round end drop logic
+            // Check if raccoon reached edge while seeking (carrying vegetables) - use full canvas boundaries
             if (carriedVegetables.length > 0 && 
-                (raccoon.x < 20 || raccoon.x > 780 || raccoon.y < 20 || raccoon.y > 580)) {
+                (raccoon.x < 0 || raccoon.x > 800 || raccoon.y < 0 || raccoon.y > 600)) {
                 this.raccoonEscape(raccoon);
             }
         } else if (state === 'carrying') {
@@ -3899,11 +3959,12 @@ class GameScene extends Phaser.Scene {
                     vegetable.setScale(1.2); // Slightly larger scale
                     vegetable.setTint(0xffffff); // Ensure no tint is applied
                     vegetable.setAlpha(1.0); // Ensure full opacity
+                    vegetable.setDepth(3); // Set depth above animals (animals are depth 1, arms are depth 2)
                 }
             });
 
-            // Check if raccoon reached edge - use same boundaries as round end drop logic
-            if (raccoon.x < 20 || raccoon.x > 780 || raccoon.y < 20 || raccoon.y > 580) {
+            // Check if raccoon reached edge - use full canvas boundaries
+            if (raccoon.x < 0 || raccoon.x > 800 || raccoon.y < 0 || raccoon.y > 600) {
                 this.raccoonEscape(raccoon);
             }
         } else if (state === 'fleeing') {
@@ -4011,16 +4072,30 @@ class GameScene extends Phaser.Scene {
     }
 
     squirrelGrabVegetable(squirrel, vegetable) {
+        // CRITICAL: Multiple layers of protection against round transition vegetable grabbing
         // Don't grab vegetables if squirrel is stopped (round ending) or if round is not active or if round is ending
         // Also don't grab if vegetable is already being carried by another animal
-        if (squirrel.getData('state') === 'seeking' && vegetable.getData('inPlay') && !this.vegetablesDropped && this.roundActive && !this.isVegetableBeingCarried(vegetable)) {
+        if (squirrel.getData('state') === 'seeking' && 
+            vegetable.getData('inPlay') && 
+            !this.vegetablesDropped && 
+            this.roundActive && 
+            !this.roundEnding &&  // CRITICAL: Prevent grabbing during round transitions
+            !this.isVegetableBeingCarried(vegetable)) {
+            
             // Check actual distance to ensure squirrel is close enough
             const distance = Phaser.Math.Distance.Between(squirrel.x, squirrel.y, vegetable.x, vegetable.y);
             if (distance <= 25) { // Require closer proximity for grabbing
+                // Double-check round state before making any changes
+                if (!this.roundActive || this.roundEnding) {
+                    console.log('PROTECTION: Prevented squirrel vegetable grab during round transition');
+                    return;
+                }
+                
                 squirrel.setData('state', 'carrying');
                 squirrel.setData('hasVegetable', true);
                 squirrel.setData('targetVegetable', vegetable);
                 console.log(`VEGETABLE STATUS CHANGE: Squirrel grabbed vegetable at (${vegetable.x}, ${vegetable.y}) - setting inPlay to false`);
+                console.log(`ROUND TRANSITION CONTEXT: roundActive=${this.roundActive}, roundEnding=${this.roundEnding}, vegetablesDropped=${this.vegetablesDropped}`);
                 vegetable.setData('inPlay', false);
                 
                 // Decrement vegetables count when grabbed (not when escaped)
@@ -4034,17 +4109,31 @@ class GameScene extends Phaser.Scene {
     }
 
     raccoonGrabVegetable(raccoon, vegetable) {
+        // CRITICAL: Multiple layers of protection against round transition vegetable grabbing
         // Don't grab vegetables if raccoon is stopped (round ending) or if round is not active or if round is ending
         // Also don't grab if vegetable is already being carried by another animal
-        if (raccoon.getData('state') === 'seeking' && vegetable.getData('inPlay') && !this.vegetablesDropped && this.roundActive && !this.isVegetableBeingCarried(vegetable)) {
+        if (raccoon.getData('state') === 'seeking' && 
+            vegetable.getData('inPlay') && 
+            !this.vegetablesDropped && 
+            this.roundActive && 
+            !this.roundEnding &&  // CRITICAL: Prevent grabbing during round transitions
+            !this.isVegetableBeingCarried(vegetable)) {
+            
             // Check actual distance to ensure raccoon is close enough
             const distance = Phaser.Math.Distance.Between(raccoon.x, raccoon.y, vegetable.x, vegetable.y);
             if (distance <= 30) { // Require closer proximity for grabbing (raccoons slightly larger)
+                // Double-check round state before making any changes
+                if (!this.roundActive || this.roundEnding) {
+                    console.log('PROTECTION: Prevented raccoon vegetable grab during round transition');
+                    return;
+                }
+                
                 const carriedVegetables = raccoon.getData('carriedVegetables');
                 
                 // Can only carry 2 vegetables
                 if (carriedVegetables.length < 2) {
                     console.log(`VEGETABLE STATUS CHANGE: Raccoon grabbed vegetable at (${vegetable.x}, ${vegetable.y}) - setting inPlay to false`);
+                    console.log(`ROUND TRANSITION CONTEXT: roundActive=${this.roundActive}, roundEnding=${this.roundEnding}, vegetablesDropped=${this.vegetablesDropped}`);
                     vegetable.setData('inPlay', false);
                     
                     // Decrement vegetables count when grabbed (not when escaped)
@@ -4073,12 +4162,16 @@ class GameScene extends Phaser.Scene {
     hitSquirrel(water, squirrel) {
         water.destroy();
         
-        // Don't process hits during round transitions to prevent vegetable state changes
+        // During round transitions, only repel animals but don't modify vegetables
         if (!this.roundActive) {
+            // Still repel the squirrel but don't drop vegetables during round transitions
+            squirrel.setData('state', 'fleeing');
+            // Play squirrel hit sound effect
+            this.playSquirrelHitSound();
             return;
         }
         
-        // Drop vegetable if carrying one
+        // Drop vegetable if carrying one (only during active rounds)
         const vegetable = squirrel.getData('targetVegetable');
         if (vegetable && vegetable.active) {
             vegetable.setData('inPlay', true);
@@ -4086,6 +4179,7 @@ class GameScene extends Phaser.Scene {
             vegetable.setScale(1.0);
             vegetable.setTint(0xffffff);
             vegetable.setAlpha(1.0);
+            vegetable.setDepth(1); // Reset depth to default (same as animal body)
         }
         
         squirrel.setData('state', 'fleeing');
@@ -4099,12 +4193,16 @@ class GameScene extends Phaser.Scene {
     hitRaccoon(water, raccoon) {
         water.destroy();
         
-        // Don't process hits during round transitions to prevent vegetable state changes
+        // During round transitions, only repel animals but don't modify vegetables
         if (!this.roundActive) {
+            // Still repel the raccoon but don't drop vegetables during round transitions
+            raccoon.setData('state', 'fleeing');
+            // Play raccoon hit sound effect
+            this.playSquirrelHitSound();
             return;
         }
         
-        // Drop all vegetables if carrying
+        // Drop all vegetables if carrying (only during active rounds)
         const carriedVegetables = raccoon.getData('carriedVegetables');
         carriedVegetables.forEach(vegetable => {
             if (vegetable && vegetable.active) {
@@ -4113,6 +4211,7 @@ class GameScene extends Phaser.Scene {
                 vegetable.setScale(1.0);
                 vegetable.setTint(0xffffff);
                 vegetable.setAlpha(1.0);
+                vegetable.setDepth(1); // Reset depth to default (same as animal body)
             }
         });
         
@@ -4263,14 +4362,31 @@ class GameScene extends Phaser.Scene {
             return;
         }
         
-        this.roundEnding = true;
-        this.roundActive = false;
+        // Mobile-specific state protection
+        if (this.isMobile) {
+            console.log('MOBILE: Starting endRound() process');
+            console.log('Document visibility:', document.visibilityState);
+            console.log('Page focused:', document.hasFocus());
+            console.log('Vegetables before endRound:', this.vegetables ? this.vegetables.children.entries.length : 'N/A');
+            
+            // Don't end round if page is hidden or lost focus during mobile events
+            if (document.hidden || !document.hasFocus()) {
+                console.log('MOBILE: Aborting endRound due to page visibility/focus loss');
+                return;
+            }
+        }
         
-        // Disable animal-vegetable collision detection during round transition (if not already disabled)
-        if (this.squirrelVegetableCollision.active) {
+        // CRITICAL: Disable collisions IMMEDIATELY to prevent race conditions with moving animals
+        console.log('PROTECTION: Disabling animal-vegetable collisions before round transition');
+        if (this.squirrelVegetableCollision && this.squirrelVegetableCollision.active) {
             this.squirrelVegetableCollision.active = false;
+        }
+        if (this.raccoonVegetableCollision && this.raccoonVegetableCollision.active) {
             this.raccoonVegetableCollision.active = false;
         }
+        
+        this.roundEnding = true;
+        this.roundActive = false;
         
         // Debug: Log vegetable states before updating count
         console.log('=== ROUND END DEBUG ===');
