@@ -4174,12 +4174,25 @@ class GameScene extends Phaser.Scene {
         // Drop vegetable if carrying one (only during active rounds)
         const vegetable = squirrel.getData('targetVegetable');
         if (vegetable && vegetable.active) {
+            console.log(`SPRAY DROP: Squirrel dropped vegetable at (${vegetable.x}, ${vegetable.y}) - resetting to full in-play state`);
+            
+            // CRITICAL: Ensure vegetable is fully restored to in-play state
             vegetable.setData('inPlay', true);
+            vegetable.setVisible(true);    // MISSING: Ensure visible
+            vegetable.setActive(true);     // MISSING: Ensure active
+            
             // Reset vegetable appearance to normal when dropped
             vegetable.setScale(1.0);
             vegetable.setTint(0xffffff);
             vegetable.setAlpha(1.0);
             vegetable.setDepth(1); // Reset depth to default (same as animal body)
+            
+            // CRITICAL: Ensure physics body is properly enabled
+            if (vegetable.body) {
+                vegetable.body.setEnable(true);
+            }
+            
+            console.log(`SPRAY DROP: Vegetable state after reset - inPlay: ${vegetable.getData('inPlay')}, visible: ${vegetable.visible}, active: ${vegetable.active}`);
         }
         
         squirrel.setData('state', 'fleeing');
@@ -4206,12 +4219,25 @@ class GameScene extends Phaser.Scene {
         const carriedVegetables = raccoon.getData('carriedVegetables');
         carriedVegetables.forEach(vegetable => {
             if (vegetable && vegetable.active) {
+                console.log(`SPRAY DROP: Raccoon dropped vegetable at (${vegetable.x}, ${vegetable.y}) - resetting to full in-play state`);
+                
+                // CRITICAL: Ensure vegetable is fully restored to in-play state
                 vegetable.setData('inPlay', true);
+                vegetable.setVisible(true);    // MISSING: Ensure visible
+                vegetable.setActive(true);     // MISSING: Ensure active
+                
                 // Reset vegetable appearance to normal when dropped
                 vegetable.setScale(1.0);
                 vegetable.setTint(0xffffff);
                 vegetable.setAlpha(1.0);
                 vegetable.setDepth(1); // Reset depth to default (same as animal body)
+                
+                // CRITICAL: Ensure physics body is properly enabled
+                if (vegetable.body) {
+                    vegetable.body.setEnable(true);
+                }
+                
+                console.log(`SPRAY DROP: Vegetable state after reset - inPlay: ${vegetable.getData('inPlay')}, visible: ${vegetable.visible}, active: ${vegetable.active}`);
             }
         });
         
