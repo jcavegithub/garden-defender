@@ -42,6 +42,14 @@ class GameScene extends Phaser.Scene {
         this.lastSprayTime = 0; // Track timing for continuous spray
         this.lastSprayAngle = null; // Track last spray angle for adaptive timing
         
+        // Water level system
+        this.waterLevel = 100; // Start with full water (0-100)
+        this.maxWaterLevel = 100;
+        this.waterDepletionRate = 15; // Water lost per second while spraying
+        this.waterRefillRate = 8; // Water gained per second when not spraying
+        this.isSpraying = false; // Track if currently spraying
+        this.lastWaterUpdate = 0; // Track timing for water level updates
+        
         // Movement tracking variables to preserve spray rotation
         this.wasMovingLeft = false;
         this.wasMovingRight = false;
@@ -2409,6 +2417,12 @@ class GameScene extends Phaser.Scene {
         
         this.gameStarted = true;
         
+        // Reset water level to full when starting a new game
+        if (isNewGame) {
+            this.waterLevel = this.maxWaterLevel;
+            this.isSpraying = false;
+        }
+        
         // Check current button states to determine if music/sounds should be enabled
         const musicButton = document.getElementById('music-toggle');
         const soundButton = document.getElementById('sound-toggle');
@@ -2740,6 +2754,9 @@ class GameScene extends Phaser.Scene {
             }
         }
         
+        // Water level management
+        this.updateWaterLevel(delta);
+        
         // Handle pause toggle
         if (Phaser.Input.Keyboard.JustDown(this.pauseKey)) {
             this.togglePause();
@@ -2825,8 +2842,16 @@ class GameScene extends Phaser.Scene {
         const downPressed = keyboardDownPressed || (!isUsingJoystickForSpray && this.mobileControls.down);
         const sprayPressed = this.spaceKey.isDown || this.mobileControls.spray;
         
-        // Check if player is currently spraying water
-        const isSpraying = sprayPressed;
+        // Check if player is currently spraying water and has water available
+        const wantsToSpray = sprayPressed;
+        const canSpray = this.waterLevel > 0;
+        const isSpraying = wantsToSpray && canSpray;
+        
+        // Update water level spray state
+        this.isSpraying = isSpraying;
+        
+        // Update mobile control styling based on spray state and water level
+        this.updateMobileControlStyling(isSpraying);
         
         // Track when spraying starts to determine initial facing direction
         if (isSpraying && !this.wasSpraying) {
@@ -3594,6 +3619,15 @@ class GameScene extends Phaser.Scene {
     }
 
     sprayWater() {
+        // Check if there's enough water to spray
+        if (this.waterLevel <= 0) {
+            this.isSpraying = false;
+            return; // Can't spray without water
+        }
+        
+        // Mark that we're spraying (for water depletion)
+        this.isSpraying = true;
+        
         // Create a stream of water droplets that project outward
         const streamLength = 8; // Number of water droplets in the stream
         const dropletSpacing = 20; // Distance between droplets along the stream
@@ -4617,6 +4651,9 @@ class GameScene extends Phaser.Scene {
         // Use the maintained vegetablesLeft property instead of recalculating
         document.getElementById('vegetables-left').textContent = `Vegetables: ${this.vegetablesLeft}`;
         
+        // Update water level display
+        this.updateWaterLevelDisplay();
+        
         // Update pause status
         const pauseStatus = document.getElementById('pause-status');
         if (this.gamePaused) {
@@ -4627,10 +4664,49 @@ class GameScene extends Phaser.Scene {
         }
     }
 
+    updateWaterLevel(delta) {
+        // Only update water level if game is active and not paused
+        if (!this.roundActive || this.gamePaused) return;
+        
+        const deltaSeconds = delta / 1000; // Convert delta from milliseconds to seconds
+        
+        if (this.isSpraying) {
+            // Deplete water when spraying
+            this.waterLevel -= this.waterDepletionRate * deltaSeconds;
+            this.waterLevel = Math.max(0, this.waterLevel); // Don't go below 0
+        } else {
+            // Refill water when not spraying
+            this.waterLevel += this.waterRefillRate * deltaSeconds;
+            this.waterLevel = Math.min(this.maxWaterLevel, this.waterLevel); // Don't exceed max
+        }
+        
+        // Update UI immediately when water level changes
+        this.updateWaterLevelDisplay();
+    }
+
+    updateWaterLevelDisplay() {
+        // Update water level display (this is separate from main updateUI to avoid constant calls)
+        const waterLevelFill = document.getElementById('water-level-fill');
+        if (waterLevelFill) {
+            const waterPercentage = Math.max(0, this.waterLevel) / this.maxWaterLevel;
+            waterLevelFill.style.transform = `scaleY(${waterPercentage})`;
+            
+            // Change color based on water level
+            if (this.waterLevel <= 0) {
+                waterLevelFill.style.background = 'linear-gradient(0deg, #8B0000 0%, #FF4500 100%)'; // Red when empty
+            } else if (this.waterLevel < 30) {
+                waterLevelFill.style.background = 'linear-gradient(0deg, #FF6347 0%, #FFA500 100%)'; // Orange when low
+            } else {
+                waterLevelFill.style.background = 'linear-gradient(0deg, #1E90FF 0%, #87CEEB 100%)'; // Blue when normal
+            }
+        }
+    }
+
     updateMobileControlStyling(isSpraying) {
         // Update virtual joystick styling to indicate spray mode
         const joystickBase = document.getElementById('joystick-base');
         const joystickKnob = document.getElementById('joystick-knob');
+        const sprayBtn = document.getElementById('spray-btn');
         
         if (joystickBase && joystickKnob) {
             if (isSpraying) {
@@ -4645,6 +4721,17 @@ class GameScene extends Phaser.Scene {
                 // Remove spray styling when not spraying
                 joystickBase.classList.remove('spraying');
                 joystickKnob.classList.remove('spraying');
+            }
+        }
+        
+        // Update spray button styling based on water level
+        if (sprayBtn) {
+            if (this.waterLevel <= 0) {
+                sprayBtn.classList.add('no-water');
+                sprayBtn.style.opacity = '0.5';
+            } else {
+                sprayBtn.classList.remove('no-water');
+                sprayBtn.style.opacity = '1';
             }
         }
     }
