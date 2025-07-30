@@ -1103,6 +1103,8 @@ class GameScene extends Phaser.Scene {
             box-shadow: 0 4px 20px rgba(255, 215, 0, 0.5);
             text-align: center;
             border: 3px solid #B8860B;
+            min-width: 400px;
+            max-width: 90vw;
         `;
         
         document.body.appendChild(message);
@@ -1158,20 +1160,25 @@ class GameScene extends Phaser.Scene {
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
-                background: rgba(0, 0, 0, 0.6);
+                background: rgba(0, 0, 0, 0.7);
                 color: white;
-                padding: 20px 30px;
-                border-radius: 10px;
-                font-size: 18px;
+                padding: 20px 25px;
+                border-radius: 12px;
+                font-size: 16px;
                 font-weight: bold;
                 text-align: center;
                 z-index: 1000;
                 pointer-events: none;
-                min-width: 380px;
-                max-width: 90vw;
+                width: 220px;
+                height: 120px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
                 word-wrap: break-word;
                 overflow-wrap: break-word;
-                line-height: 1.4;
+                line-height: 1.3;
+                border: 2px solid rgba(255, 255, 255, 0.2);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
             `;
             // Append to the game container instead of body for proper positioning
             const gameContainer = document.getElementById('game') || document.getElementById('game-container') || document.body;
@@ -1180,8 +1187,8 @@ class GameScene extends Phaser.Scene {
             console.log('Using existing message element');
         }
         
-        messageElement.innerHTML = message.replace(/\n/g, '<br>');
-        messageElement.style.display = 'block';
+        messageElement.innerHTML = `<div style="text-align: center; width: 100%;">${message.replace(/\n/g, '<br>')}</div>`;
+        messageElement.style.display = 'flex';
         console.log('Message element updated and shown');
         
         // Hide after duration
