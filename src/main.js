@@ -522,16 +522,16 @@ class GameScene extends Phaser.Scene {
         tapHandleOffGraphics.fillStyle(0xFF4500);
         tapHandleOffGraphics.fillCircle(18, 12, 7.5);
         
-        // Handle lever (vertical when off - red) - made longer to match horizontal lever visual impact
+        // Handle lever (vertical when off - red) - made thicker to match horizontal lever visual impact
         tapHandleOffGraphics.fillStyle(0x000000); // Black outline
-        tapHandleOffGraphics.fillRect(13.5, -9, 9, 30); // Extended length to match horizontal lever (30 pixels)
-        tapHandleOffGraphics.fillCircle(18, -9, 4.5); // Top cap
-        tapHandleOffGraphics.fillCircle(18, 21, 4.5); // Bottom cap
+        tapHandleOffGraphics.fillRect(12, -9, 12, 30); // Made wider (12 instead of 9) to match visual weight
+        tapHandleOffGraphics.fillCircle(18, -9, 6); // Larger top cap (6 instead of 4.5)
+        tapHandleOffGraphics.fillCircle(18, 21, 6); // Larger bottom cap (6 instead of 4.5)
         
         tapHandleOffGraphics.fillStyle(0xDC143C);
-        tapHandleOffGraphics.fillRect(15, -7.5, 6, 27); // Extended inner lever
-        tapHandleOffGraphics.fillCircle(18, -7.5, 3); // Top cap inner
-        tapHandleOffGraphics.fillCircle(18, 19.5, 3); // Bottom cap inner
+        tapHandleOffGraphics.fillRect(13.5, -7.5, 9, 27); // Made wider inner lever (9 instead of 6)
+        tapHandleOffGraphics.fillCircle(18, -7.5, 4.5); // Larger top cap inner (4.5 instead of 3)
+        tapHandleOffGraphics.fillCircle(18, 19.5, 4.5); // Larger bottom cap inner (4.5 instead of 3)
         
             tapHandleOffGraphics.generateTexture('tap-handle-off', 36, 48);
             tapHandleOffGraphics.destroy();
@@ -2548,11 +2548,50 @@ class GameScene extends Phaser.Scene {
                 this.vegetables.add(vegetable);
             }
         } else {
-            // For subsequent rounds, reactivate any existing vegetables that are still in the field
+            // For subsequent rounds, reactivate any existing vegetables that were saved from the previous round
             this.vegetables.children.entries.forEach((vegetable, index) => {
-                if (vegetable.active && vegetable.visible) {
-                    console.log(`VEGETABLE STATUS CHANGE: Round ${this.round} - reactivating vegetable at (${vegetable.x}, ${vegetable.y}) - setting inPlay to true`);
-                    vegetable.setData('inPlay', true);
+                // Check if this vegetable was marked as saved (inPlay=true) from the previous round
+                if (vegetable.getData('inPlay')) {
+                    // Log position before any modifications
+                    const beforeX = vegetable.x;
+                    const beforeY = vegetable.y;
+                    console.log(`VEGETABLE POSITION TRACKING: Round ${this.round} - vegetable ${index} BEFORE reactivation: (${beforeX}, ${beforeY})`);
+                    
+                    console.log(`VEGETABLE STATUS CHANGE: Round ${this.round} - reactivating saved vegetable at (${vegetable.x}, ${vegetable.y}) - ensuring active/visible`);
+                    
+                    // Ensure the vegetable is properly active and visible for the new round
+                    vegetable.setActive(true);
+                    vegetable.setVisible(true);
+                    
+                    // Log position after setActive/setVisible
+                    console.log(`VEGETABLE POSITION TRACKING: Round ${this.round} - vegetable ${index} AFTER setActive/setVisible: (${vegetable.x}, ${vegetable.y})`);
+                    
+                    // Stabilize physics - ensure vegetable is completely stationary
+                    if (vegetable.body) {
+                        vegetable.body.setVelocity(0, 0);
+                        vegetable.body.setAngularVelocity(0);
+                        vegetable.body.setAcceleration(0, 0);
+                        console.log(`VEGETABLE POSITION TRACKING: Round ${this.round} - vegetable ${index} physics stabilized`);
+                    }
+                    
+                    // Ensure vegetables start with normal appearance
+                    vegetable.setScale(1.0);
+                    vegetable.setTint(0xffffff);
+                    vegetable.setAlpha(1.0);
+                    
+                    // Log final position after all modifications
+                    const afterX = vegetable.x;
+                    const afterY = vegetable.y;
+                    console.log(`VEGETABLE POSITION TRACKING: Round ${this.round} - vegetable ${index} FINAL position: (${afterX}, ${afterY})`);
+                    
+                    // Check if position changed during reactivation
+                    if (Math.abs(afterX - beforeX) > 0.001 || Math.abs(afterY - beforeY) > 0.001) {
+                        console.warn(`VEGETABLE POSITION CHANGE DETECTED: Round ${this.round} - vegetable ${index} moved from (${beforeX}, ${beforeY}) to (${afterX}, ${afterY}) during reactivation!`);
+                    }
+                    
+                    // inPlay is already true from previous round, no need to set again
+                } else {
+                    console.log(`VEGETABLE STATUS CHANGE: Round ${this.round} - vegetable at (${vegetable.x}, ${vegetable.y}) was not saved, keeping inPlay=false`);
                 }
             });
         }
@@ -3276,20 +3315,54 @@ class GameScene extends Phaser.Scene {
                     } else {
                         // Vegetable is within bounds - keep it in play
                         console.log(`VEGETABLE STATUS CHANGE: Squirrel ${squirrelIndex} vegetable at (${vegX}, ${vegY}) kept in play - setting inPlay to true`);
+                        
+                        // Track position changes during drop operations
+                        const posBeforeDrop = { x: targetVegetable.x, y: targetVegetable.y };
+                        console.log(`DROP POSITION TRACKING: Squirrel vegetable position before drop operations: (${posBeforeDrop.x}, ${posBeforeDrop.y})`);
+                        
                         targetVegetable.setData('inPlay', true);
+                        const posAfterInPlay = { x: targetVegetable.x, y: targetVegetable.y };
+                        if (posAfterInPlay.x !== posBeforeDrop.x || posAfterInPlay.y !== posBeforeDrop.y) {
+                            console.warn(`DROP POSITION CHANGE: Position changed after setData('inPlay', true): from (${posBeforeDrop.x}, ${posBeforeDrop.y}) to (${posAfterInPlay.x}, ${posAfterInPlay.y})`);
+                        }
+                        
                         targetVegetable.setVisible(true);
+                        const posAfterVisible = { x: targetVegetable.x, y: targetVegetable.y };
+                        if (posAfterVisible.x !== posAfterInPlay.x || posAfterVisible.y !== posAfterInPlay.y) {
+                            console.warn(`DROP POSITION CHANGE: Position changed after setVisible(true): from (${posAfterInPlay.x}, ${posAfterInPlay.y}) to (${posAfterVisible.x}, ${posAfterVisible.y})`);
+                        }
+                        
                         targetVegetable.setActive(true);
+                        const posAfterActive = { x: targetVegetable.x, y: targetVegetable.y };
+                        if (posAfterActive.x !== posAfterVisible.x || posAfterActive.y !== posAfterVisible.y) {
+                            console.warn(`DROP POSITION CHANGE: Position changed after setActive(true): from (${posAfterVisible.x}, ${posAfterVisible.y}) to (${posAfterActive.x}, ${posAfterActive.y})`);
+                        }
+                        
                         targetVegetable.alpha = 1; // Ensure full opacity
                         
                         // Ensure it has a physics body and is enabled
                         if (targetVegetable.body) {
                             targetVegetable.body.enable = true;
+                            const posAfterPhysics = { x: targetVegetable.x, y: targetVegetable.y };
+                            if (posAfterPhysics.x !== posAfterActive.x || posAfterPhysics.y !== posAfterActive.y) {
+                                console.warn(`DROP POSITION CHANGE: Position changed after physics enable: from (${posAfterActive.x}, ${posAfterActive.y}) to (${posAfterPhysics.x}, ${posAfterPhysics.y})`);
+                            }
                         }
                         
                         // Make sure it's part of the vegetables group
                         const wasInGroup = this.vegetables.contains(targetVegetable);
                         if (!wasInGroup) {
                             this.vegetables.add(targetVegetable);
+                            const posAfterGroup = { x: targetVegetable.x, y: targetVegetable.y };
+                            if (posAfterGroup.x !== targetVegetable.x || posAfterGroup.y !== targetVegetable.y) {
+                                console.warn(`DROP POSITION CHANGE: Position changed after adding to group: final position (${posAfterGroup.x}, ${posAfterGroup.y})`);
+                            }
+                        }
+                        
+                        const posAfterDrop = { x: targetVegetable.x, y: targetVegetable.y };
+                        console.log(`DROP POSITION TRACKING: Squirrel vegetable final position after drop operations: (${posAfterDrop.x}, ${posAfterDrop.y})`);
+                        if (posAfterDrop.x !== posBeforeDrop.x || posAfterDrop.y !== posBeforeDrop.y) {
+                            console.warn(`DROP POSITION CHANGE SUMMARY: Position changed during drop: from (${posBeforeDrop.x}, ${posBeforeDrop.y}) to (${posAfterDrop.x}, ${posAfterDrop.y})`);
                         }
                         
                         droppedCount++;
@@ -3357,9 +3430,29 @@ class GameScene extends Phaser.Scene {
                         } else {
                             // Vegetable is within bounds - keep it in play
                             console.log(`VEGETABLE STATUS CHANGE: Raccoon ${raccoonIndex} vegetable at (${vegX}, ${vegY}) kept in play - setting inPlay to true`);
+                            
+                            // Track position changes during drop operations
+                            const posBeforeDrop = { x: vegetable.x, y: vegetable.y };
+                            console.log(`DROP POSITION TRACKING: Raccoon vegetable position before drop operations: (${posBeforeDrop.x}, ${posBeforeDrop.y})`);
+                            
                             vegetable.setData('inPlay', true);
+                            const posAfterInPlay = { x: vegetable.x, y: vegetable.y };
+                            if (posAfterInPlay.x !== posBeforeDrop.x || posAfterInPlay.y !== posBeforeDrop.y) {
+                                console.warn(`DROP POSITION CHANGE: Position changed after setData('inPlay', true): from (${posBeforeDrop.x}, ${posBeforeDrop.y}) to (${posAfterInPlay.x}, ${posAfterInPlay.y})`);
+                            }
+                            
                             vegetable.setVisible(true);
+                            const posAfterVisible = { x: vegetable.x, y: vegetable.y };
+                            if (posAfterVisible.x !== posAfterInPlay.x || posAfterVisible.y !== posAfterInPlay.y) {
+                                console.warn(`DROP POSITION CHANGE: Position changed after setVisible(true): from (${posAfterInPlay.x}, ${posAfterInPlay.y}) to (${posAfterVisible.x}, ${posAfterVisible.y})`);
+                            }
+                            
                             vegetable.setActive(true);
+                            const posAfterActive = { x: vegetable.x, y: vegetable.y };
+                            if (posAfterActive.x !== posAfterVisible.x || posAfterActive.y !== posAfterVisible.y) {
+                                console.warn(`DROP POSITION CHANGE: Position changed after setActive(true): from (${posAfterVisible.x}, ${posAfterVisible.y}) to (${posAfterActive.x}, ${posAfterActive.y})`);
+                            }
+                            
                             vegetable.alpha = 1; // Ensure full opacity
                             
                             // Reset vegetable appearance to normal when dropped
@@ -3370,12 +3463,26 @@ class GameScene extends Phaser.Scene {
                             // Ensure it has a physics body and is enabled
                             if (vegetable.body) {
                                 vegetable.body.enable = true;
+                                const posAfterPhysics = { x: vegetable.x, y: vegetable.y };
+                                if (posAfterPhysics.x !== posAfterActive.x || posAfterPhysics.y !== posAfterActive.y) {
+                                    console.warn(`DROP POSITION CHANGE: Position changed after physics enable: from (${posAfterActive.x}, ${posAfterActive.y}) to (${posAfterPhysics.x}, ${posAfterPhysics.y})`);
+                                }
                             }
                             
                             // Make sure it's part of the vegetables group
                             const wasInGroup = this.vegetables.contains(vegetable);
                             if (!wasInGroup) {
                                 this.vegetables.add(vegetable);
+                                const posAfterGroup = { x: vegetable.x, y: vegetable.y };
+                                if (posAfterGroup.x !== vegetable.x || posAfterGroup.y !== vegetable.y) {
+                                    console.warn(`DROP POSITION CHANGE: Position changed after adding to group: final position (${posAfterGroup.x}, ${posAfterGroup.y})`);
+                                }
+                            }
+                            
+                            const posAfterDrop = { x: vegetable.x, y: vegetable.y };
+                            console.log(`DROP POSITION TRACKING: Raccoon vegetable final position after drop operations: (${posAfterDrop.x}, ${posAfterDrop.y})`);
+                            if (posAfterDrop.x !== posBeforeDrop.x || posAfterDrop.y !== posBeforeDrop.y) {
+                                console.warn(`DROP POSITION CHANGE SUMMARY: Position changed during drop: from (${posBeforeDrop.x}, ${posBeforeDrop.y}) to (${posAfterDrop.x}, ${posAfterDrop.y})`);
                             }
                             
                             droppedCount++;
@@ -3643,8 +3750,8 @@ class GameScene extends Phaser.Scene {
                 vegetable.setAlpha(1.0); // Ensure full opacity
             }
 
-            // Check if squirrel reached edge
-            if (squirrel.x < 0 || squirrel.x > 800 || squirrel.y < 0 || squirrel.y > 600) {
+            // Check if squirrel reached edge - use same boundaries as round end drop logic
+            if (squirrel.x < 20 || squirrel.x > 780 || squirrel.y < 20 || squirrel.y > 580) {
                 this.squirrelEscape(squirrel);
             }
         } else if (state === 'fleeing') {
@@ -3762,9 +3869,9 @@ class GameScene extends Phaser.Scene {
                 raccoon.setData('targetVegetable', null);
             }
             
-            // Check if raccoon reached edge while seeking (carrying vegetables)
+            // Check if raccoon reached edge while seeking (carrying vegetables) - use same boundaries as round end drop logic
             if (carriedVegetables.length > 0 && 
-                (raccoon.x < 0 || raccoon.x > 800 || raccoon.y < 0 || raccoon.y > 600)) {
+                (raccoon.x < 20 || raccoon.x > 780 || raccoon.y < 20 || raccoon.y > 580)) {
                 this.raccoonEscape(raccoon);
             }
         } else if (state === 'carrying') {
@@ -3795,8 +3902,8 @@ class GameScene extends Phaser.Scene {
                 }
             });
 
-            // Check if raccoon reached edge
-            if (raccoon.x < 0 || raccoon.x > 800 || raccoon.y < 0 || raccoon.y > 600) {
+            // Check if raccoon reached edge - use same boundaries as round end drop logic
+            if (raccoon.x < 20 || raccoon.x > 780 || raccoon.y < 20 || raccoon.y > 580) {
                 this.raccoonEscape(raccoon);
             }
         } else if (state === 'fleeing') {
@@ -4170,6 +4277,8 @@ class GameScene extends Phaser.Scene {
         console.log('Vegetables before updateVegetableCount():');
         this.vegetables.children.entries.forEach((veg, index) => {
             console.log(`  Vegetable ${index}: active=${veg.active}, inPlay=${veg.getData('inPlay')}, visible=${veg.visible}, x=${Math.round(veg.x)}, y=${Math.round(veg.y)}`);
+            // Log precise coordinates for position tracking
+            console.log(`VEGETABLE POSITION TRACKING: Round ${this.round} END - vegetable ${index} precise position: (${veg.x}, ${veg.y})`);
         });
         console.log(`vegetablesLeft before update: ${this.vegetablesLeft}`);
         
