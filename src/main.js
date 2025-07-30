@@ -2551,6 +2551,7 @@ class GameScene extends Phaser.Scene {
             // For subsequent rounds, reactivate any existing vegetables that are still in the field
             this.vegetables.children.entries.forEach((vegetable, index) => {
                 if (vegetable.active && vegetable.visible) {
+                    console.log(`VEGETABLE STATUS CHANGE: Round ${this.round} - reactivating vegetable at (${vegetable.x}, ${vegetable.y}) - setting inPlay to true`);
                     vegetable.setData('inPlay', true);
                 }
             });
@@ -3153,7 +3154,7 @@ class GameScene extends Phaser.Scene {
                         this.raccoonVegetableCollision.active = false;
                         
                         // Wait a moment for vegetables to be properly registered, then end round
-                        this.time.delayedCall(100, () => {
+                        this.time.delayedCall(200, () => {
                             console.log(`Time expired - ending round after dropping vegetables`);
                             this.endRound();
                         });
@@ -3165,6 +3166,15 @@ class GameScene extends Phaser.Scene {
                 }
             } else if (totalVegetablesInPlay === 0) {
                 // All vegetables gone before time expired
+                console.log('=== ROUND END TRIGGER DEBUG ===');
+                console.log(`totalVegetablesInPlay: ${totalVegetablesInPlay}`);
+                console.log(`vegetablesInField: ${vegetablesInField}`);
+                console.log(`vegetablesBeingCarried: ${vegetablesBeingCarried}`);
+                console.log('Vegetables in field details:');
+                this.vegetables.children.entries.forEach((veg, index) => {
+                    console.log(`  Vegetable ${index}: active=${veg.active}, inPlay=${veg.getData('inPlay')}, visible=${veg.visible}, x=${Math.round(veg.x)}, y=${Math.round(veg.y)}`);
+                });
+                console.log('=== END TRIGGER DEBUG ===');
                 console.log(`All vegetables gone - ending round`);
                 this.endRound();
             }
@@ -3208,10 +3218,27 @@ class GameScene extends Phaser.Scene {
             bottom: 580
         };
         
+        // Track processed vegetables to prevent double-processing
+        const processedVegetables = new Set();
+        
         // Drop vegetables carried by squirrels
-        this.squirrels.children.entries.forEach(squirrel => {
+        this.squirrels.children.entries.forEach((squirrel, squirrelIndex) => {
             const targetVegetable = squirrel.getData('targetVegetable');
             if (targetVegetable && targetVegetable.active) {
+                // Check if this vegetable has already been processed
+                if (processedVegetables.has(targetVegetable)) {
+                    console.log(`Squirrel ${squirrelIndex} - SKIPPING already processed vegetable at (${Math.round(targetVegetable.x)}, ${Math.round(targetVegetable.y)})`);
+                    // Clear the squirrel's reference since vegetable was already processed
+                    squirrel.setData('targetVegetable', null);
+                    squirrel.setData('state', 'seeking');
+                    return; // Skip this squirrel
+                }
+                
+                // Mark this vegetable as processed
+                processedVegetables.add(targetVegetable);
+                
+                console.log(`Processing squirrel ${squirrelIndex} at (${Math.round(squirrel.x)}, ${Math.round(squirrel.y)}) carrying vegetable at (${Math.round(targetVegetable.x)}, ${Math.round(targetVegetable.y)})`);
+                
                 // Clear the squirrel's reference FIRST to prevent position updates
                 squirrel.setData('targetVegetable', null);
                 squirrel.setData('state', 'seeking');
@@ -3220,8 +3247,11 @@ class GameScene extends Phaser.Scene {
                 const isOutside = squirrel.x < playBounds.left || squirrel.x > playBounds.right || 
                                 squirrel.y < playBounds.top || squirrel.y > playBounds.bottom;
                 
+                console.log(`Squirrel ${squirrelIndex} boundary check: squirrel at (${Math.round(squirrel.x)}, ${Math.round(squirrel.y)}), isOutside=${isOutside}`);
+                
                 if (isOutside) {
                     // Animal is outside boundaries - vegetable is lost (out of play)
+                    console.log(`VEGETABLE STATUS CHANGE: Squirrel ${squirrelIndex} outside bounds - vegetable at (${targetVegetable.x}, ${targetVegetable.y}) lost - setting inPlay to false`);
                     targetVegetable.setData('inPlay', false);
                     targetVegetable.setVisible(false);
                     targetVegetable.setActive(false);
@@ -3229,15 +3259,23 @@ class GameScene extends Phaser.Scene {
                 } else {
                     // Animal is within boundaries - drop vegetable where it currently is
                     // Check if vegetable itself is outside bounds - if so, it's lost
-                    if (targetVegetable.x < playBounds.left || targetVegetable.x > playBounds.right ||
-                        targetVegetable.y < playBounds.top || targetVegetable.y > playBounds.bottom) {
+                    const vegX = targetVegetable.x;
+                    const vegY = targetVegetable.y;
+                    const isVegOutside = vegX < playBounds.left || vegX > playBounds.right ||
+                                       vegY < playBounds.top || vegY > playBounds.bottom;
+                    
+                    console.log(`Squirrel vegetable boundary check: x=${vegX}, y=${vegY}, bounds: left=${playBounds.left}, right=${playBounds.right}, top=${playBounds.top}, bottom=${playBounds.bottom}, isOutside=${isVegOutside}`);
+                    
+                    if (isVegOutside) {
                         // Vegetable is outside bounds - mark as lost
+                        console.log(`VEGETABLE STATUS CHANGE: Squirrel ${squirrelIndex} vegetable at (${vegX}, ${vegY}) marked as lost due to boundary violation - setting inPlay to false`);
                         targetVegetable.setData('inPlay', false);
                         targetVegetable.setVisible(false);
                         targetVegetable.setActive(false);
                         lostCount++;
                     } else {
                         // Vegetable is within bounds - keep it in play
+                        console.log(`VEGETABLE STATUS CHANGE: Squirrel ${squirrelIndex} vegetable at (${vegX}, ${vegY}) kept in play - setting inPlay to true`);
                         targetVegetable.setData('inPlay', true);
                         targetVegetable.setVisible(true);
                         targetVegetable.setActive(true);
@@ -3261,8 +3299,12 @@ class GameScene extends Phaser.Scene {
         });
         
         // Drop vegetables carried by raccoons
-        this.raccoons.children.entries.forEach(raccoon => {
+        this.raccoons.children.entries.forEach((raccoon, raccoonIndex) => {
             const carriedVegetables = raccoon.getData('carriedVegetables') || [];
+            
+            if (carriedVegetables.length > 0) {
+                console.log(`Processing raccoon ${raccoonIndex} at (${Math.round(raccoon.x)}, ${Math.round(raccoon.y)}) carrying ${carriedVegetables.length} vegetables`);
+            }
             
             // Clear the raccoon's references FIRST to prevent position updates
             raccoon.setData('carriedVegetables', []);
@@ -3273,10 +3315,24 @@ class GameScene extends Phaser.Scene {
             const isOutside = raccoon.x < playBounds.left || raccoon.x > playBounds.right || 
                             raccoon.y < playBounds.top || raccoon.y > playBounds.bottom;
             
-            carriedVegetables.forEach(vegetable => {
+            console.log(`Raccoon ${raccoonIndex} boundary check: raccoon at (${Math.round(raccoon.x)}, ${Math.round(raccoon.y)}), isOutside=${isOutside}`);
+            
+            carriedVegetables.forEach((vegetable, vegetableIndex) => {
                 if (vegetable && vegetable.active) {
+                    // Check if this vegetable has already been processed
+                    if (processedVegetables.has(vegetable)) {
+                        console.log(`Raccoon ${raccoonIndex} vegetable ${vegetableIndex} - SKIPPING already processed vegetable at (${Math.round(vegetable.x)}, ${Math.round(vegetable.y)})`);
+                        return; // Skip this vegetable
+                    }
+                    
+                    // Mark this vegetable as processed
+                    processedVegetables.add(vegetable);
+                    
+                    console.log(`Processing raccoon ${raccoonIndex} vegetable ${vegetableIndex} at (${Math.round(vegetable.x)}, ${Math.round(vegetable.y)})`);
+                    
                     if (isOutside) {
                         // Animal is outside boundaries - vegetable is lost (out of play)
+                        console.log(`VEGETABLE STATUS CHANGE: Raccoon ${raccoonIndex} outside bounds - vegetable at (${vegetable.x}, ${vegetable.y}) lost - setting inPlay to false`);
                         vegetable.setData('inPlay', false);
                         vegetable.setVisible(false);
                         vegetable.setActive(false);
@@ -3284,15 +3340,23 @@ class GameScene extends Phaser.Scene {
                     } else {
                         // Animal is within boundaries - drop vegetable where it currently is
                         // Check if vegetable itself is outside bounds - if so, it's lost
-                        if (vegetable.x < playBounds.left || vegetable.x > playBounds.right ||
-                            vegetable.y < playBounds.top || vegetable.y > playBounds.bottom) {
+                        const vegX = vegetable.x;
+                        const vegY = vegetable.y;
+                        const isVegOutside = vegX < playBounds.left || vegX > playBounds.right ||
+                                           vegY < playBounds.top || vegY > playBounds.bottom;
+                        
+                        console.log(`Raccoon vegetable boundary check: x=${vegX}, y=${vegY}, bounds: left=${playBounds.left}, right=${playBounds.right}, top=${playBounds.top}, bottom=${playBounds.bottom}, isOutside=${isVegOutside}`);
+                        
+                        if (isVegOutside) {
                             // Vegetable is outside bounds - mark as lost
+                            console.log(`VEGETABLE STATUS CHANGE: Raccoon ${raccoonIndex} vegetable at (${vegX}, ${vegY}) marked as lost due to boundary violation - setting inPlay to false`);
                             vegetable.setData('inPlay', false);
                             vegetable.setVisible(false);
                             vegetable.setActive(false);
                             lostCount++;
                         } else {
                             // Vegetable is within bounds - keep it in play
+                            console.log(`VEGETABLE STATUS CHANGE: Raccoon ${raccoonIndex} vegetable at (${vegX}, ${vegY}) kept in play - setting inPlay to true`);
                             vegetable.setData('inPlay', true);
                             vegetable.setVisible(true);
                             vegetable.setActive(true);
@@ -3321,7 +3385,7 @@ class GameScene extends Phaser.Scene {
             });
         });
         
-        console.log(`Dropped ${droppedCount} vegetables back into the play field, ${lostCount} vegetables lost outside boundaries`);
+        console.log(`Dropped ${droppedCount} vegetables. ${lostCount} vegetables lost outside boundaries.`);
         
         // Update the vegetable count immediately
         this.updateVegetableCount();
@@ -3819,15 +3883,37 @@ class GameScene extends Phaser.Scene {
         return false; // Didn't consume spacebar
     }
 
+    isVegetableBeingCarried(vegetable) {
+        // Check if any squirrel is carrying this vegetable
+        for (let squirrel of this.squirrels.children.entries) {
+            const targetVegetable = squirrel.getData('targetVegetable');
+            if (targetVegetable === vegetable && squirrel.getData('state') === 'carrying') {
+                return true;
+            }
+        }
+        
+        // Check if any raccoon is carrying this vegetable
+        for (let raccoon of this.raccoons.children.entries) {
+            const carriedVegetables = raccoon.getData('carriedVegetables') || [];
+            if (carriedVegetables.includes(vegetable)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
     squirrelGrabVegetable(squirrel, vegetable) {
-        // Don't grab vegetables if squirrel is stopped (round ending) or if round is ending
-        if (squirrel.getData('state') === 'seeking' && vegetable.getData('inPlay') && !this.vegetablesDropped) {
+        // Don't grab vegetables if squirrel is stopped (round ending) or if round is not active or if round is ending
+        // Also don't grab if vegetable is already being carried by another animal
+        if (squirrel.getData('state') === 'seeking' && vegetable.getData('inPlay') && !this.vegetablesDropped && this.roundActive && !this.isVegetableBeingCarried(vegetable)) {
             // Check actual distance to ensure squirrel is close enough
             const distance = Phaser.Math.Distance.Between(squirrel.x, squirrel.y, vegetable.x, vegetable.y);
             if (distance <= 25) { // Require closer proximity for grabbing
                 squirrel.setData('state', 'carrying');
                 squirrel.setData('hasVegetable', true);
                 squirrel.setData('targetVegetable', vegetable);
+                console.log(`VEGETABLE STATUS CHANGE: Squirrel grabbed vegetable at (${vegetable.x}, ${vegetable.y}) - setting inPlay to false`);
                 vegetable.setData('inPlay', false);
                 
                 // Decrement vegetables count when grabbed (not when escaped)
@@ -3841,8 +3927,9 @@ class GameScene extends Phaser.Scene {
     }
 
     raccoonGrabVegetable(raccoon, vegetable) {
-        // Don't grab vegetables if raccoon is stopped (round ending) or if round is ending
-        if (raccoon.getData('state') === 'seeking' && vegetable.getData('inPlay') && !this.vegetablesDropped) {
+        // Don't grab vegetables if raccoon is stopped (round ending) or if round is not active or if round is ending
+        // Also don't grab if vegetable is already being carried by another animal
+        if (raccoon.getData('state') === 'seeking' && vegetable.getData('inPlay') && !this.vegetablesDropped && this.roundActive && !this.isVegetableBeingCarried(vegetable)) {
             // Check actual distance to ensure raccoon is close enough
             const distance = Phaser.Math.Distance.Between(raccoon.x, raccoon.y, vegetable.x, vegetable.y);
             if (distance <= 30) { // Require closer proximity for grabbing (raccoons slightly larger)
@@ -3850,6 +3937,7 @@ class GameScene extends Phaser.Scene {
                 
                 // Can only carry 2 vegetables
                 if (carriedVegetables.length < 2) {
+                    console.log(`VEGETABLE STATUS CHANGE: Raccoon grabbed vegetable at (${vegetable.x}, ${vegetable.y}) - setting inPlay to false`);
                     vegetable.setData('inPlay', false);
                     
                     // Decrement vegetables count when grabbed (not when escaped)
@@ -3878,6 +3966,11 @@ class GameScene extends Phaser.Scene {
     hitSquirrel(water, squirrel) {
         water.destroy();
         
+        // Don't process hits during round transitions to prevent vegetable state changes
+        if (!this.roundActive) {
+            return;
+        }
+        
         // Drop vegetable if carrying one
         const vegetable = squirrel.getData('targetVegetable');
         if (vegetable && vegetable.active) {
@@ -3898,6 +3991,11 @@ class GameScene extends Phaser.Scene {
 
     hitRaccoon(water, raccoon) {
         water.destroy();
+        
+        // Don't process hits during round transitions to prevent vegetable state changes
+        if (!this.roundActive) {
+            return;
+        }
         
         // Drop all vegetables if carrying
         const carriedVegetables = raccoon.getData('carriedVegetables');
@@ -4067,8 +4165,18 @@ class GameScene extends Phaser.Scene {
             this.raccoonVegetableCollision.active = false;
         }
         
+        // Debug: Log vegetable states before updating count
+        console.log('=== ROUND END DEBUG ===');
+        console.log('Vegetables before updateVegetableCount():');
+        this.vegetables.children.entries.forEach((veg, index) => {
+            console.log(`  Vegetable ${index}: active=${veg.active}, inPlay=${veg.getData('inPlay')}, visible=${veg.visible}, x=${Math.round(veg.x)}, y=${Math.round(veg.y)}`);
+        });
+        console.log(`vegetablesLeft before update: ${this.vegetablesLeft}`);
+        
         // First, make sure we have the most up-to-date vegetable count
         this.updateVegetableCount();
+        
+        console.log(`vegetablesLeft after update: ${this.vegetablesLeft}`);
         
         // Count vegetables actually still in the field (not grabbed by animals)
         const vegetablesInField = this.vegetables.children.entries.filter(veg => 
@@ -4076,6 +4184,9 @@ class GameScene extends Phaser.Scene {
         ).length;
         const pointsScored = vegetablesInField;
         this.score += pointsScored;
+        
+        console.log(`vegetablesInField counted: ${vegetablesInField}`);
+        console.log('=== END ROUND DEBUG ===');
         
         // Store current round number before any modifications
         const currentRound = this.round;
