@@ -9415,26 +9415,33 @@ This typically indicates that your device does not have a healthy Internet conne
             box-shadow: 0 4px 20px rgba(255, 215, 0, 0.5);
             text-align: center;
             border: 3px solid #B8860B;
+            min-width: 400px;
+            max-width: 90vw;
         `,document.body.appendChild(T),setTimeout(()=>{T.parentNode&&T.parentNode.removeChild(T)},4e3)}updateHighScoreDisplay(){if(document.getElementById("top-scores-content"))for(let T=0;T<3;T++){const w=document.getElementById(`score-${T+1}`).querySelector(".score-info");if(this.topScores[T]){const O=this.topScores[T],v=O.playerName||"Anonymous",E=v.length>12?v.substring(0,12)+"...":v;w.textContent=`${E}: ${O.score}`,w.classList.remove("no-score")}else w.textContent="No scores yet",w.classList.add("no-score")}}showMessage(c,T=3e3){console.log("showMessage called with:",c,"duration:",T),this.messageTimeout&&(clearTimeout(this.messageTimeout),this.messageTimeout=null);let A=document.getElementById("game-message");A?console.log("Using existing message element"):(console.log("Creating new message element"),A=document.createElement("div"),A.id="game-message",A.style.cssText=`
                 position: absolute;
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
-                background: rgba(0, 0, 0, 0.6);
+                background: rgba(0, 0, 0, 0.7);
                 color: white;
-                padding: 20px 30px;
-                border-radius: 10px;
-                font-size: 18px;
+                padding: 20px 25px;
+                border-radius: 12px;
+                font-size: 16px;
                 font-weight: bold;
                 text-align: center;
                 z-index: 1000;
                 pointer-events: none;
-                min-width: 380px;
-                max-width: 90vw;
+                width: 280px;
+                height: 120px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
                 word-wrap: break-word;
                 overflow-wrap: break-word;
-                line-height: 1.4;
-            `,(document.getElementById("game")||document.getElementById("game-container")||document.body).appendChild(A)),A.innerHTML=c.replace(/\n/g,"<br>"),A.style.display="block",console.log("Message element updated and shown"),this.messageTimeout=setTimeout(()=>{A.style.display="none",console.log("Message hidden after",T,"ms"),this.messageTimeout=null},T)}async showSaveNameDialog(){return new Promise(c=>{const T=document.createElement("div");T.style.cssText=`
+                line-height: 1.3;
+                border: 2px solid rgba(255, 255, 255, 0.2);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            `,(document.getElementById("game")||document.getElementById("game-container")||document.body).appendChild(A)),A.innerHTML=`<div style="text-align: center; width: 100%;">${c.replace(/\n/g,"<br>")}</div>`,A.style.display="flex",console.log("Message element updated and shown"),this.messageTimeout=setTimeout(()=>{A.style.display="none",console.log("Message hidden after",T,"ms"),this.messageTimeout=null},T)}async showSaveNameDialog(){return new Promise(c=>{const T=document.createElement("div");T.style.cssText=`
                 position: fixed;
                 top: 0;
                 left: 0;
