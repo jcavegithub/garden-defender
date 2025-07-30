@@ -2576,52 +2576,57 @@ class GameScene extends Phaser.Scene {
                 this.vegetables.add(vegetable);
             }
         } else {
-            // For subsequent rounds, reactivate any existing vegetables that were saved from the previous round
+            // For subsequent rounds, reactivate ALL existing vegetables that still exist
+            // This ensures vegetables don't disappear due to state corruption
+            console.log(`=== ROUND ${this.round} VEGETABLE RECOVERY ===`);
             this.vegetables.children.entries.forEach((vegetable, index) => {
-                // Check if this vegetable was marked as saved (inPlay=true) from the previous round
-                if (vegetable.getData('inPlay')) {
-                    // Log position before any modifications
-                    const beforeX = vegetable.x;
-                    const beforeY = vegetable.y;
-                    console.log(`VEGETABLE POSITION TRACKING: Round ${this.round} - vegetable ${index} BEFORE reactivation: (${beforeX}, ${beforeY})`);
-                    
-                    console.log(`VEGETABLE STATUS CHANGE: Round ${this.round} - reactivating saved vegetable at (${vegetable.x}, ${vegetable.y}) - ensuring active/visible`);
-                    
-                    // Ensure the vegetable is properly active and visible for the new round
-                    vegetable.setActive(true);
-                    vegetable.setVisible(true);
-                    
-                    // Log position after setActive/setVisible
-                    console.log(`VEGETABLE POSITION TRACKING: Round ${this.round} - vegetable ${index} AFTER setActive/setVisible: (${vegetable.x}, ${vegetable.y})`);
-                    
-                    // Stabilize physics - ensure vegetable is completely stationary
-                    if (vegetable.body) {
-                        vegetable.body.setVelocity(0, 0);
-                        vegetable.body.setAngularVelocity(0);
-                        vegetable.body.setAcceleration(0, 0);
-                        console.log(`VEGETABLE POSITION TRACKING: Round ${this.round} - vegetable ${index} physics stabilized`);
-                    }
-                    
-                    // Ensure vegetables start with normal appearance
-                    vegetable.setScale(1.0);
-                    vegetable.setTint(0xffffff);
-                    vegetable.setAlpha(1.0);
-                    
-                    // Log final position after all modifications
-                    const afterX = vegetable.x;
-                    const afterY = vegetable.y;
-                    console.log(`VEGETABLE POSITION TRACKING: Round ${this.round} - vegetable ${index} FINAL position: (${afterX}, ${afterY})`);
-                    
-                    // Check if position changed during reactivation
-                    if (Math.abs(afterX - beforeX) > 0.001 || Math.abs(afterY - beforeY) > 0.001) {
-                        console.warn(`VEGETABLE POSITION CHANGE DETECTED: Round ${this.round} - vegetable ${index} moved from (${beforeX}, ${beforeY}) to (${afterX}, ${afterY}) during reactivation!`);
-                    }
-                    
-                    // inPlay is already true from previous round, no need to set again
-                } else {
-                    console.log(`VEGETABLE STATUS CHANGE: Round ${this.round} - vegetable at (${vegetable.x}, ${vegetable.y}) was not saved, keeping inPlay=false`);
+                // Log position before any modifications
+                const beforeX = vegetable.x;
+                const beforeY = vegetable.y;
+                const wasInPlay = vegetable.getData('inPlay');
+                
+                console.log(`VEGETABLE RECOVERY: Round ${this.round} - vegetable ${index} at (${beforeX}, ${beforeY}), was inPlay: ${wasInPlay}`);
+                
+                // CRITICAL: Ensure ALL remaining vegetables are reactivated for new round
+                // This prevents vegetables from disappearing due to state corruption
+                vegetable.setData('inPlay', true);
+                console.log(`VEGETABLE STATUS CHANGE: Round ${this.round} - forcing vegetable ${index} to inPlay=true`);
+                
+                // Ensure the vegetable is properly active and visible for the new round
+                vegetable.setActive(true);
+                vegetable.setVisible(true);
+                
+                // Log position after setActive/setVisible
+                console.log(`VEGETABLE POSITION TRACKING: Round ${this.round} - vegetable ${index} AFTER setActive/setVisible: (${vegetable.x}, ${vegetable.y})`);
+                
+                // Stabilize physics - ensure vegetable is completely stationary
+                if (vegetable.body) {
+                    vegetable.body.setVelocity(0, 0);
+                    vegetable.body.setAngularVelocity(0);
+                    vegetable.body.setAcceleration(0, 0);
+                    console.log(`VEGETABLE POSITION TRACKING: Round ${this.round} - vegetable ${index} physics stabilized`);
+                }
+                
+                // Ensure vegetables start with normal appearance
+                vegetable.setScale(1.0);
+                vegetable.setTint(0xffffff);
+                vegetable.setAlpha(1.0);
+                
+                // Log final position after all modifications
+                const afterX = vegetable.x;
+                const afterY = vegetable.y;
+                console.log(`VEGETABLE POSITION TRACKING: Round ${this.round} - vegetable ${index} FINAL position: (${afterX}, ${afterY})`);
+                
+                // Check if position changed during reactivation
+                if (Math.abs(afterX - beforeX) > 0.001 || Math.abs(afterY - beforeY) > 0.001) {
+                    console.warn(`VEGETABLE POSITION CHANGE DETECTED: Round ${this.round} - vegetable ${index} moved from (${beforeX}, ${beforeY}) to (${afterX}, ${afterY}) during reactivation!`);
+                }
+                
+                if (!wasInPlay) {
+                    console.log(`VEGETABLE RECOVERY SUCCESS: Round ${this.round} - recovered vegetable ${index} that was marked as not in play`);
                 }
             });
+            console.log(`=== END ROUND ${this.round} VEGETABLE RECOVERY ===`);
         }
         
         // Count remaining vegetables (for all rounds)
@@ -3330,17 +3335,20 @@ class GameScene extends Phaser.Scene {
                 // Mark this vegetable as processed
                 processedVegetables.add(targetVegetable);
                 
-                console.log(`Processing squirrel ${squirrelIndex} at (${Math.round(squirrel.x)}, ${Math.round(squirrel.y)}) carrying vegetable at (${Math.round(targetVegetable.x)}, ${Math.round(targetVegetable.y)})`);
+                // CRITICAL: Capture animal position IMMEDIATELY before any state changes
+                const animalDropPosition = { x: squirrel.x, y: squirrel.y };
+                
+                console.log(`Processing squirrel ${squirrelIndex} at (${Math.round(animalDropPosition.x)}, ${Math.round(animalDropPosition.y)}) carrying vegetable at (${Math.round(targetVegetable.x)}, ${Math.round(targetVegetable.y)})`);
                 
                 // Clear the squirrel's reference FIRST to prevent position updates
                 squirrel.setData('targetVegetable', null);
                 squirrel.setData('state', 'seeking');
                 
-                // Check if squirrel is outside play boundaries
-                const isOutside = squirrel.x < playBounds.left || squirrel.x > playBounds.right || 
-                                squirrel.y < playBounds.top || squirrel.y > playBounds.bottom;
+                // Check if squirrel is outside play boundaries using captured position
+                const isOutside = animalDropPosition.x < playBounds.left || animalDropPosition.x > playBounds.right || 
+                                animalDropPosition.y < playBounds.top || animalDropPosition.y > playBounds.bottom;
                 
-                console.log(`Squirrel ${squirrelIndex} boundary check: squirrel at (${Math.round(squirrel.x)}, ${Math.round(squirrel.y)}), isOutside=${isOutside}`);
+                console.log(`Squirrel ${squirrelIndex} boundary check: squirrel at (${Math.round(animalDropPosition.x)}, ${Math.round(animalDropPosition.y)}), isOutside=${isOutside}`);
                 
                 if (isOutside) {
                     // Animal is outside boundaries - vegetable is lost (out of play)
@@ -3434,16 +3442,19 @@ class GameScene extends Phaser.Scene {
                 console.log(`Processing raccoon ${raccoonIndex} at (${Math.round(raccoon.x)}, ${Math.round(raccoon.y)}) carrying ${carriedVegetables.length} vegetables`);
             }
             
+            // CRITICAL: Capture animal position IMMEDIATELY before any state changes
+            const animalDropPosition = { x: raccoon.x, y: raccoon.y };
+            
             // Clear the raccoon's references FIRST to prevent position updates
             raccoon.setData('carriedVegetables', []);
             raccoon.setData('vegetablesCarried', 0);
             raccoon.setData('state', 'seeking');
             
-            // Check if raccoon is outside play boundaries
-            const isOutside = raccoon.x < playBounds.left || raccoon.x > playBounds.right || 
-                            raccoon.y < playBounds.top || raccoon.y > playBounds.bottom;
+            // Check if raccoon is outside play boundaries using captured position
+            const isOutside = animalDropPosition.x < playBounds.left || animalDropPosition.x > playBounds.right || 
+                            animalDropPosition.y < playBounds.top || animalDropPosition.y > playBounds.bottom;
             
-            console.log(`Raccoon ${raccoonIndex} boundary check: raccoon at (${Math.round(raccoon.x)}, ${Math.round(raccoon.y)}), isOutside=${isOutside}`);
+            console.log(`Raccoon ${raccoonIndex} boundary check: raccoon at (${Math.round(animalDropPosition.x)}, ${Math.round(animalDropPosition.y)}), isOutside=${isOutside}`);
             
             carriedVegetables.forEach((vegetable, vegetableIndex) => {
                 if (vegetable && vegetable.active) {
