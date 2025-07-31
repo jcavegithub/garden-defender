@@ -197,13 +197,13 @@ body::-webkit-scrollbar {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
+  gap: 3px;
   width: 56px;
   max-width: 56px;
   overflow: visible;
   flex-shrink: 1;
-  height: 28px;
-  max-height: 28px;
+  height: 30px;
+  max-height: 30px;
   position: relative;
   padding: 4px 0px !important;
 }
@@ -282,13 +282,21 @@ body::-webkit-scrollbar {
   height: 100%;
   background: linear-gradient(90deg, #1E90FF 0%, #87CEEB 100%);
   transition: transform 0.2s ease-out;
-  transform-origin: right;
+  transform-origin: right center;
   z-index: 1;
   border-radius: 0px !important;
   border-top-left-radius: 0px !important;
   border-bottom-left-radius: 0px !important;
   border-top-right-radius: 0px !important;
   border-bottom-right-radius: 0px !important;
+  /* Mobile optimization to prevent height fluctuations */
+  will-change: transform;
+  -webkit-transform-style: preserve-3d;
+  transform-style: preserve-3d;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-perspective: 1000px;
+  perspective: 1000px;
 }
 
 /* Game controls panel - two-row layout */
@@ -1721,7 +1729,7 @@ body:not(.game-started):not(.game-over) #start-screen {
 .spray-divider {
   border: none;
   border-top: 1px solid rgba(255, 255, 255, 0.4);
-  margin: 6px 0; /* Increased from 4px to 6px for even more spacing */
+  margin: 8px 0; /* Reduced from 10px to 8px for slightly less spacing */
   width: 70%;
   align-self: center;
 }
@@ -1734,7 +1742,7 @@ body:not(.game-started):not(.game-over) #start-screen {
   line-height: 0.9;
   font-size: 10px;
   font-weight: 900;
-  margin: 3px 0; /* Increased from 2px to 3px for even more spacing */
+  margin: 4px 0; /* Reduced from 5px to 4px for slightly less spacing */
 }
 
 .tap-icon {
@@ -1754,11 +1762,11 @@ body:not(.game-started):not(.game-over) #start-screen {
   }
   
   .spray-divider {
-    margin: 2px 0;
+    margin: 6px 0; /* Reduced from 8px to 6px for slightly less mobile spacing */
   }
   
   .spray-top, .spray-bottom {
-    margin: 1px 0;
+    margin: 3px 0; /* Reduced from 4px to 3px for slightly less mobile spacing */
   }
 }
 

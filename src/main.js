@@ -4689,8 +4689,10 @@ class GameScene extends Phaser.Scene {
         const waterLevelFill = document.getElementById('water-level-fill');
         if (waterLevelFill) {
             const waterPercentage = Math.max(0, this.waterLevel) / this.maxWaterLevel;
+            // Round to 3 decimal places to prevent micro-fluctuations in width
+            const roundedPercentage = Math.round(waterPercentage * 1000) / 1000;
             // Use scaleX for horizontal scaling, with right-to-left depletion
-            waterLevelFill.style.transform = `scaleX(${waterPercentage})`;
+            waterLevelFill.style.transform = `scaleX(${roundedPercentage})`;
             
             // Change color based on water level
             if (this.waterLevel <= 20) {
