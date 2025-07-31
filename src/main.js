@@ -16,7 +16,7 @@ class GameScene extends Phaser.Scene {
         this.pauseKey = null;
         this.score = 0;
         this.round = 1;
-        this.timeLeft = 20;
+        this.timeLeft = 60;
         this.vegetablesLeft = 0;
         this.squirrelSpawnRate = 3000; // milliseconds
         this.raccoonSpawnRate = 8000; // Less frequent than squirrels
@@ -2546,7 +2546,7 @@ class GameScene extends Phaser.Scene {
         // All rounds now use the delay system
         this.roundActive = false; // Keep inactive until message disappears
         
-        this.timeLeft = 20;
+        this.timeLeft = 60;
         this.squirrelSpawnRate = Math.max(1000, 3000 - (this.round - 1) * 200);
         this.raccoonSpawnRate = Math.max(4000, 8000 - (this.round - 1) * 300);
         
@@ -3146,7 +3146,7 @@ class GameScene extends Phaser.Scene {
             
             if (!tapInteractionHandled) {
                 // If tap interaction wasn't handled, try to spray water
-                if (this.waterEnabled) {
+                if (this.waterEnabled && this.waterLevel > 0) {
                     this.sprayWater();
                 } else {
                     // Play a "no water" sound or visual indicator
@@ -3157,7 +3157,7 @@ class GameScene extends Phaser.Scene {
         
         // Continuous water spray while holding spacebar/spray button
         const sprayHeld = this.spaceKey.isDown || this.mobileControls.spray;
-        if (sprayHeld && this.waterEnabled) {
+        if (sprayHeld && this.waterEnabled && this.waterLevel > 0) {
             // Different spray strategies for analog vs discrete input
             const currentAngle = this.gardenerAngle;
             let shouldSpray = false;
@@ -3620,7 +3620,7 @@ class GameScene extends Phaser.Scene {
 
     sprayWater() {
         // Check if there's enough water to spray
-        if (this.waterLevel <= 0) {
+        if (this.waterLevel <= 20) {
             this.isSpraying = false;
             return; // Can't spray without water
         }
@@ -4346,7 +4346,7 @@ class GameScene extends Phaser.Scene {
         this.gamePaused = false;
         this.score = 0;
         this.round = 1;
-        this.timeLeft = 20;
+        this.timeLeft = 60;
         this.lastTimerUpdate = 0; // Reset manual timer
         this.vegetablesLeft = 0; // Reset vegetables count
         
@@ -4628,7 +4628,7 @@ class GameScene extends Phaser.Scene {
         console.log('Reset gameStarted to:', this.gameStarted);
         this.score = 0;
         this.round = 1;
-        this.timeLeft = 20;
+        this.timeLeft = 60;
         this.lastTimerUpdate = 0;
         this.vegetablesLeft = 0;
         
@@ -4644,12 +4644,12 @@ class GameScene extends Phaser.Scene {
     }
 
     updateUI() {
-        document.getElementById('score').textContent = `Score: ${this.score}`;
-        document.getElementById('round').textContent = `Round: ${this.round}`;
-        document.getElementById('timer').textContent = `Time: ${this.timeLeft}`;
+        document.querySelector('#score .stat-value').textContent = `${this.score}`;
+        document.querySelector('#round .stat-value').textContent = `${this.round}`;
+        document.querySelector('#timer .stat-value').textContent = `${this.timeLeft}`;
         
         // Use the maintained vegetablesLeft property instead of recalculating
-        document.getElementById('vegetables-left').textContent = `Vegetables: ${this.vegetablesLeft}`;
+        document.querySelector('#vegetables-left .stat-value').textContent = `${this.vegetablesLeft}`;
         
         // Update water level display
         this.updateWaterLevelDisplay();
@@ -4689,15 +4689,16 @@ class GameScene extends Phaser.Scene {
         const waterLevelFill = document.getElementById('water-level-fill');
         if (waterLevelFill) {
             const waterPercentage = Math.max(0, this.waterLevel) / this.maxWaterLevel;
-            waterLevelFill.style.transform = `scaleY(${waterPercentage})`;
+            // Use scaleX for horizontal scaling, with right-to-left depletion
+            waterLevelFill.style.transform = `scaleX(${waterPercentage})`;
             
             // Change color based on water level
-            if (this.waterLevel <= 0) {
-                waterLevelFill.style.background = 'linear-gradient(0deg, #8B0000 0%, #FF4500 100%)'; // Red when empty
-            } else if (this.waterLevel < 30) {
-                waterLevelFill.style.background = 'linear-gradient(0deg, #FF6347 0%, #FFA500 100%)'; // Orange when low
+            if (this.waterLevel <= 20) {
+                waterLevelFill.style.background = 'linear-gradient(90deg, #8B0000 0%, #FF4500 100%)'; // Red when empty
+            } else if (this.waterLevel < 50) {
+                waterLevelFill.style.background = 'linear-gradient(90deg, #FF6347 0%, #FFA500 100%)'; // Orange when low
             } else {
-                waterLevelFill.style.background = 'linear-gradient(0deg, #1E90FF 0%, #87CEEB 100%)'; // Blue when normal
+                waterLevelFill.style.background = 'linear-gradient(90deg, #1E90FF 0%, #87CEEB 100%)'; // Blue when normal
             }
         }
     }
@@ -4726,7 +4727,7 @@ class GameScene extends Phaser.Scene {
         
         // Update spray button styling based on water level
         if (sprayBtn) {
-            if (this.waterLevel <= 0) {
+            if (this.waterLevel <= 20) {
                 sprayBtn.classList.add('no-water');
                 sprayBtn.style.opacity = '0.5';
             } else {
