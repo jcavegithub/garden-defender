@@ -45,8 +45,8 @@ class GameScene extends Phaser.Scene {
         // Water level system
         this.waterLevel = 100; // Start with full water (0-100)
         this.maxWaterLevel = 100;
-        this.waterDepletionRate = 15; // Water lost per second while spraying
-        this.waterRefillRate = 8; // Water gained per second when not spraying
+        this.waterDepletionRate = 25; // Water lost per second while spraying (increased from 15)
+        this.waterRefillRate = 5; // Water gained per second when not spraying (decreased from 8)
         this.isSpraying = false; // Track if currently spraying
         this.lastWaterUpdate = 0; // Track timing for water level updates
         
@@ -2542,6 +2542,7 @@ class GameScene extends Phaser.Scene {
                 return;
             }        this.roundStarting = true;
         this.vegetablesDropped = false; // Reset the vegetables dropped flag for new round
+        this.lastDropResult = null; // Reset drop result from previous round
         
         // All rounds now use the delay system
         this.roundActive = false; // Keep inactive until message disappears
@@ -3264,6 +3265,7 @@ class GameScene extends Phaser.Scene {
                 if (!this.vegetablesDropped) {
                     // Check for carried vegetables atomically within the drop function
                     const dropResult = this.dropAllCarriedVegetables();
+                    this.lastDropResult = dropResult; // Store result for endRound() scoring
                     
                     if (dropResult.totalProcessed > 0) {
                         console.log(`Time expired - processed ${dropResult.totalProcessed} carried vegetables (${dropResult.dropped} dropped, ${dropResult.lost} lost)`);
@@ -4150,8 +4152,8 @@ class GameScene extends Phaser.Scene {
                 console.log(`ROUND TRANSITION CONTEXT: roundActive=${this.roundActive}, roundEnding=${this.roundEnding}, vegetablesDropped=${this.vegetablesDropped}`);
                 vegetable.setData('inPlay', false);
                 
-                // Decrement vegetables count when grabbed (not when escaped)
-                this.vegetablesLeft--;
+                // Update vegetable count after status change (removed manual decrement to prevent double-counting)
+                this.updateVegetableCount();
                 this.updateUI();
                 
                 // Play vegetable grab sound
@@ -4188,8 +4190,8 @@ class GameScene extends Phaser.Scene {
                     console.log(`ROUND TRANSITION CONTEXT: roundActive=${this.roundActive}, roundEnding=${this.roundEnding}, vegetablesDropped=${this.vegetablesDropped}`);
                     vegetable.setData('inPlay', false);
                     
-                    // Decrement vegetables count when grabbed (not when escaped)
-                    this.vegetablesLeft--;
+                    // Update vegetable count after status change (removed manual decrement to prevent double-counting)
+                    this.updateVegetableCount();
                     this.updateUI();
                     
                     // Add vegetable to raccoon's carried vegetables
@@ -4244,6 +4246,9 @@ class GameScene extends Phaser.Scene {
                 vegetable.body.setEnable(true);
             }
             
+            // Update vegetable count to reflect the dropped vegetable
+            this.updateVegetableCount();
+            
             console.log(`SPRAY DROP: Vegetable state after reset - inPlay: ${vegetable.getData('inPlay')}, visible: ${vegetable.visible}, active: ${vegetable.active}`);
         }
         
@@ -4292,6 +4297,9 @@ class GameScene extends Phaser.Scene {
                 console.log(`SPRAY DROP: Vegetable state after reset - inPlay: ${vegetable.getData('inPlay')}, visible: ${vegetable.visible}, active: ${vegetable.active}`);
             }
         });
+        
+        // Update vegetable count after all vegetables have been restored
+        this.updateVegetableCount();
         
         raccoon.setData('state', 'fleeing');
         raccoon.setData('targetVegetable', null);
@@ -4485,10 +4493,19 @@ class GameScene extends Phaser.Scene {
         const vegetablesInField = this.vegetables.children.entries.filter(veg => 
             veg.active && veg.getData('inPlay')
         ).length;
-        const pointsScored = vegetablesInField;
+        
+        // Calculate remaining vegetables (vegetables that will be available for next round)
+        // For time expiry scenarios: vegetablesInField already includes dropped vegetables,
+        // so we don't need to add them separately to avoid double-counting
+        // For non-time expiry scenarios: no vegetables were dropped, so just use vegetablesInField
+        const remainingVegetables = vegetablesInField;
+        
+        // Score is based on remaining vegetables (what actually continues to next round)
+        const pointsScored = remainingVegetables;
         this.score += pointsScored;
         
         console.log(`vegetablesInField counted: ${vegetablesInField}`);
+        console.log(`remainingVegetables (total for next round): ${remainingVegetables}`);
         console.log('=== END ROUND DEBUG ===');
         
         // Store current round number before any modifications
@@ -4500,22 +4517,22 @@ class GameScene extends Phaser.Scene {
         const totalVegetablesInPlay = vegetablesInField + vegetablesBeingCarried;
         const roundEndedByVegetables = totalVegetablesInPlay === 0;
         
-        // Show round end notification
+        // Show round end notification using remaining vegetables
         let roundEndMessage;
         if (roundEndedByTime) {
-            roundEndMessage = `⏰ Time's Up!\nRound ${currentRound} Complete\n🥕 ${pointsScored} vegetables saved\n+${pointsScored} points`;
+            roundEndMessage = `⏰ Time's Up!\nRound ${currentRound} Complete\n🥕 ${remainingVegetables} vegetables remaining\n+${pointsScored} points`;
         } else {
-            if (pointsScored > 0) {
-                roundEndMessage = `🎉 Round ${currentRound} Complete!\n🥕 ${pointsScored} vegetables defended\n+${pointsScored} points`;
+            if (remainingVegetables > 0) {
+                roundEndMessage = `🎉 Round ${currentRound} Complete!\n🥕 ${remainingVegetables} vegetables remaining\n+${pointsScored} points`;
             } else {
-                roundEndMessage = `� Round ${this.round} Failed!\nAll vegetables stolen!\n+0 points`;
+                roundEndMessage = `😞 Round ${this.round} Failed!\nAll vegetables lost!\n+0 points`;
             }
         }
         
         this.showMessage(roundEndMessage, 4000); // Show for 4 seconds (increased from 3 seconds)
         
-        // Check for game over: only if no vegetables saved AND no vegetables remain for next round AND time didn't expire
-        if (pointsScored === 0 && totalVegetablesInPlay === 0 && this.timeLeft > 0) {
+        // Check for game over: only if no vegetables remain for next round AND time didn't expire
+        if (remainingVegetables === 0 && this.timeLeft > 0) {
             this.gameOver();
             return;
         }
