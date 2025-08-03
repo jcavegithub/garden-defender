@@ -42,11 +42,18 @@ class GameScene extends Phaser.Scene {
         this.lastSprayTime = 0; // Track timing for continuous spray
         this.lastSprayAngle = null; // Track last spray angle for adaptive timing
         
+        // Water pump system
+        this.pumpWell = null; // Water pump well object
+        this.pumpHandle = null; // Water pump handle object
+        this.pumpPressed = false; // Track if pump is currently being pressed
+        this.lastPumpTime = 0; // Track timing for pump actions
+        this.pumpCooldown = 150; // Minimum time between pump actions (ms)
+        
         // Water level system
         this.waterLevel = 100; // Start with full water (0-100)
         this.maxWaterLevel = 100;
         this.waterDepletionRate = 25; // Water lost per second while spraying (increased from 15)
-        this.waterRefillRate = 5; // Water gained per second when not spraying (decreased from 8)
+        this.waterPumpRate = 15; // Water gained per pump action
         this.isSpraying = false; // Track if currently spraying
         this.lastWaterUpdate = 0; // Track timing for water level updates
         
@@ -85,11 +92,6 @@ class GameScene extends Phaser.Scene {
         this.isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
         this.isLandscape = window.innerWidth > window.innerHeight;
         this.isPortrait = window.innerHeight > window.innerWidth;
-        this.waterTapBody = null; // Water tap body object
-        this.waterTapHandle = null; // Water tap handle object
-        this.waterEnabled = true; // Whether water spray is available
-        this.lastSprayTime = 0; // Track timing for continuous spray
-        this.lastSprayAngle = null; // Track last spray angle for adaptive timing
         
         // Firebase integration
         this.firebaseManager = null; // Will be initialized in create()
@@ -544,6 +546,417 @@ class GameScene extends Phaser.Scene {
             tapHandleOffGraphics.generateTexture('tap-handle-off', 36, 48);
             tapHandleOffGraphics.destroy();
         }
+
+        // Create water pump graphics
+        if (!this.textures.exists('pump-well')) {
+            // Create classic hand pump base (simple cylindrical pump housing)
+            const wellGraphics = this.add.graphics();
+            
+            // Ground/base plate
+            wellGraphics.fillStyle(0x8B4513);
+            wellGraphics.fillEllipse(25, 42, 30, 12); // Wooden base platform
+            wellGraphics.fillStyle(0x654321);
+            wellGraphics.fillEllipse(26, 40, 30, 12); // Platform depth
+            wellGraphics.fillStyle(0xA0522D);
+            wellGraphics.fillEllipse(25, 39, 30, 12); // Platform top
+            
+            // Main pump cylinder/housing (cast iron look)
+            wellGraphics.fillStyle(0x2F4F4F);
+            wellGraphics.fillRect(20, 15, 10, 30); // Main cylinder body
+            wellGraphics.fillStyle(0x1C1C1C);
+            wellGraphics.fillRect(30, 13, 3, 30); // Cylinder right side (depth)
+            wellGraphics.fillStyle(0x404040);
+            wellGraphics.fillRect(22, 13, 10, 2); // Cylinder top
+            
+            // Pump cylinder details and rivets
+            wellGraphics.fillStyle(0x708090);
+            wellGraphics.fillCircle(22, 20, 1); // Rivet 1
+            wellGraphics.fillCircle(28, 20, 1); // Rivet 2
+            wellGraphics.fillCircle(22, 30, 1); // Rivet 3
+            wellGraphics.fillCircle(28, 30, 1); // Rivet 4
+            wellGraphics.fillCircle(22, 40, 1); // Rivet 5
+            wellGraphics.fillCircle(28, 40, 1); // Rivet 6
+            
+            // Pump base flange
+            wellGraphics.fillStyle(0x2F4F4F);
+            wellGraphics.fillRect(18, 42, 14, 3); // Base flange
+            wellGraphics.fillStyle(0x1C1C1C);
+            wellGraphics.fillRect(32, 40, 2, 3); // Flange right side
+            
+            // Water spout coming out of cylinder
+            wellGraphics.fillStyle(0x708090);
+            wellGraphics.fillRect(30, 25, 8, 3); // Spout horizontal part
+            wellGraphics.fillRect(36, 28, 3, 8); // Spout downward bend
+            wellGraphics.fillStyle(0x556B7D);
+            wellGraphics.fillRect(38, 25, 1, 3); // Spout right side
+            wellGraphics.fillRect(39, 27, 1, 8); // Spout bend right side
+            
+            wellGraphics.generateTexture('pump-well', 50, 50);
+            wellGraphics.destroy();
+        }
+
+        if (!this.textures.exists('pump-handle')) {
+            // Create classic pump handle (long lever arm)
+            const pumpGraphics = this.add.graphics();
+            
+            // Ground/base plate (same as well base)
+            pumpGraphics.fillStyle(0x8B4513);
+            pumpGraphics.fillEllipse(16, 42, 30, 12); // Wooden base platform
+            pumpGraphics.fillStyle(0x654321);
+            pumpGraphics.fillEllipse(17, 40, 30, 12); // Platform depth
+            pumpGraphics.fillStyle(0xA0522D);
+            pumpGraphics.fillEllipse(16, 39, 30, 12); // Platform top
+            
+            // Main pump cylinder (same as well)
+            pumpGraphics.fillStyle(0x2F4F4F);
+            pumpGraphics.fillRect(11, 15, 10, 30); // Main cylinder body
+            pumpGraphics.fillStyle(0x1C1C1C);
+            pumpGraphics.fillRect(21, 13, 3, 30); // Cylinder right side
+            pumpGraphics.fillStyle(0x404040);
+            pumpGraphics.fillRect(13, 13, 10, 2); // Cylinder top
+            
+            // Cylinder details
+            pumpGraphics.fillStyle(0x708090);
+            pumpGraphics.fillCircle(13, 20, 1); // Rivets
+            pumpGraphics.fillCircle(19, 20, 1);
+            pumpGraphics.fillCircle(13, 30, 1);
+            pumpGraphics.fillCircle(19, 30, 1);
+            pumpGraphics.fillCircle(13, 40, 1);
+            pumpGraphics.fillCircle(19, 40, 1);
+            
+            // Base flange
+            pumpGraphics.fillStyle(0x2F4F4F);
+            pumpGraphics.fillRect(9, 42, 14, 3);
+            pumpGraphics.fillStyle(0x1C1C1C);
+            pumpGraphics.fillRect(23, 40, 2, 3);
+            
+            // Pivot point at top of cylinder
+            pumpGraphics.fillStyle(0x708090);
+            pumpGraphics.fillCircle(16, 13, 2); // Main pivot
+            pumpGraphics.fillStyle(0xC0C0C0);
+            pumpGraphics.fillCircle(16, 12, 1); // Pivot highlight
+            
+            // Long pump handle arm
+            pumpGraphics.fillStyle(0x8B4513);
+            pumpGraphics.fillRect(4, 11, 24, 4); // Handle arm (wood)
+            pumpGraphics.fillStyle(0x654321);
+            pumpGraphics.fillRect(28, 9, 2, 4); // Handle arm right side
+            pumpGraphics.fillStyle(0xA0522D);
+            pumpGraphics.fillRect(6, 9, 24, 2); // Handle arm top
+            
+            // Handle grip at end
+            pumpGraphics.fillStyle(0x654321);
+            pumpGraphics.fillRect(2, 9, 4, 8); // Grip handle
+            pumpGraphics.fillStyle(0x4A2C2A);
+            pumpGraphics.fillRect(6, 8, 1, 8); // Grip right side
+            pumpGraphics.fillStyle(0x8B4513);
+            pumpGraphics.fillRect(2, 8, 4, 1); // Grip top
+            
+            // Metal bands on handle
+            pumpGraphics.fillStyle(0x708090);
+            pumpGraphics.fillRect(10, 11, 1, 4); // Metal band 1
+            pumpGraphics.fillRect(20, 11, 1, 4); // Metal band 2
+            
+            // Water spout
+            pumpGraphics.fillStyle(0x708090);
+            pumpGraphics.fillRect(21, 25, 8, 3); // Spout horizontal
+            pumpGraphics.fillRect(27, 28, 3, 8); // Spout downward
+            pumpGraphics.fillStyle(0x556B7D);
+            pumpGraphics.fillRect(29, 25, 1, 3); // Spout right side
+            pumpGraphics.fillRect(30, 27, 1, 8); // Spout bend right side
+            
+            pumpGraphics.generateTexture('pump-handle', 32, 48);
+            pumpGraphics.destroy();
+        }
+
+        if (!this.textures.exists('pump-handle-pressed')) {
+            // Create pump handle in pressed/down position
+            const pumpPressedGraphics = this.add.graphics();
+            
+            // Ground/base plate (same)
+            pumpPressedGraphics.fillStyle(0x8B4513);
+            pumpPressedGraphics.fillEllipse(16, 42, 30, 12);
+            pumpPressedGraphics.fillStyle(0x654321);
+            pumpPressedGraphics.fillEllipse(17, 40, 30, 12);
+            pumpPressedGraphics.fillStyle(0xA0522D);
+            pumpPressedGraphics.fillEllipse(16, 39, 30, 12);
+            
+            // Main pump cylinder (same)
+            pumpPressedGraphics.fillStyle(0x2F4F4F);
+            pumpPressedGraphics.fillRect(11, 15, 10, 30);
+            pumpPressedGraphics.fillStyle(0x1C1C1C);
+            pumpPressedGraphics.fillRect(21, 13, 3, 30);
+            pumpPressedGraphics.fillStyle(0x404040);
+            pumpPressedGraphics.fillRect(13, 13, 10, 2);
+            
+            // Cylinder details
+            pumpPressedGraphics.fillStyle(0x708090);
+            pumpPressedGraphics.fillCircle(13, 20, 1);
+            pumpPressedGraphics.fillCircle(19, 20, 1);
+            pumpPressedGraphics.fillCircle(13, 30, 1);
+            pumpPressedGraphics.fillCircle(19, 30, 1);
+            pumpPressedGraphics.fillCircle(13, 40, 1);
+            pumpPressedGraphics.fillCircle(19, 40, 1);
+            
+            // Base flange
+            pumpPressedGraphics.fillStyle(0x2F4F4F);
+            pumpPressedGraphics.fillRect(9, 42, 14, 3);
+            pumpPressedGraphics.fillStyle(0x1C1C1C);
+            pumpPressedGraphics.fillRect(23, 40, 2, 3);
+            
+            // Pivot point
+            pumpPressedGraphics.fillStyle(0x708090);
+            pumpPressedGraphics.fillCircle(16, 13, 2);
+            pumpPressedGraphics.fillStyle(0xC0C0C0);
+            pumpPressedGraphics.fillCircle(16, 12, 1);
+            
+            // Handle arm in DOWN position (rotated down)
+            pumpPressedGraphics.fillStyle(0x8B4513);
+            pumpPressedGraphics.fillRect(4, 16, 24, 4); // Handle arm moved down
+            pumpPressedGraphics.fillStyle(0x654321);
+            pumpPressedGraphics.fillRect(28, 14, 2, 4); // Right side
+            pumpPressedGraphics.fillStyle(0xA0522D);
+            pumpPressedGraphics.fillRect(6, 14, 24, 2); // Top
+            
+            // Handle grip (moved down with arm)
+            pumpPressedGraphics.fillStyle(0x654321);
+            pumpPressedGraphics.fillRect(2, 14, 4, 8);
+            pumpPressedGraphics.fillStyle(0x4A2C2A);
+            pumpPressedGraphics.fillRect(6, 13, 1, 8);
+            pumpPressedGraphics.fillStyle(0x8B4513);
+            pumpPressedGraphics.fillRect(2, 13, 4, 1);
+            
+            // Metal bands (moved with handle)
+            pumpPressedGraphics.fillStyle(0x708090);
+            pumpPressedGraphics.fillRect(10, 16, 1, 4);
+            pumpPressedGraphics.fillRect(20, 16, 1, 4);
+            
+            // Water spout with water flowing
+            pumpPressedGraphics.fillStyle(0x708090);
+            pumpPressedGraphics.fillRect(21, 25, 8, 3);
+            pumpPressedGraphics.fillRect(27, 28, 3, 8);
+            pumpPressedGraphics.fillStyle(0x556B7D);
+            pumpPressedGraphics.fillRect(29, 25, 1, 3);
+            pumpPressedGraphics.fillRect(30, 27, 1, 8);
+            
+            // Water stream when pumping
+            pumpPressedGraphics.fillStyle(0x4169E1);
+            pumpPressedGraphics.fillCircle(29, 37, 1.5); // Water droplet
+            pumpPressedGraphics.fillStyle(0x60A5FA);
+            pumpPressedGraphics.fillCircle(29.5, 37, 0.8); // Droplet highlight
+            pumpPressedGraphics.fillCircle(29, 40, 1); // Lower droplet
+            
+            pumpPressedGraphics.generateTexture('pump-handle-pressed', 32, 48);
+            pumpPressedGraphics.destroy();
+        }
+
+        if (!this.textures.exists('pump-handle')) {
+            // Create pump handle (3D side view with depth)
+            const pumpGraphics = this.add.graphics();
+            
+            // 3D Pump base/platform
+            pumpGraphics.fillStyle(0x8B4513);
+            pumpGraphics.fillRect(10, 40, 20, 8); // Platform front
+            pumpGraphics.fillStyle(0x654321);
+            pumpGraphics.fillRect(30, 38, 3, 8);  // Platform right side
+            pumpGraphics.fillStyle(0xA0522D);
+            pumpGraphics.fillRect(13, 37, 20, 3); // Platform top
+            
+            // 3D Pump mechanism housing
+            pumpGraphics.fillStyle(0x2F4F4F);
+            pumpGraphics.fillRect(18, 32, 4, 16); // Housing front
+            pumpGraphics.fillStyle(0x1C1C1C);
+            pumpGraphics.fillRect(22, 30, 2, 16);  // Housing right side
+            pumpGraphics.fillStyle(0x404040);
+            pumpGraphics.fillRect(20, 30, 4, 2);   // Housing top
+            
+            // 3D Vertical pump shaft
+            pumpGraphics.fillStyle(0x708090);
+            pumpGraphics.fillRect(19, 15, 2, 25); // Shaft front
+            pumpGraphics.fillStyle(0x556B7D);
+            pumpGraphics.fillRect(21, 14, 1, 25); // Shaft right side
+            
+            // 3D Pump handle (horizontal bar at top)
+            pumpGraphics.fillStyle(0x2F4F4F);
+            pumpGraphics.fillRect(8, 13, 16, 3); // Handle front
+            pumpGraphics.fillStyle(0x1C1C1C);
+            pumpGraphics.fillRect(24, 11, 2, 3);  // Handle right side
+            pumpGraphics.fillStyle(0x404040);
+            pumpGraphics.fillRect(10, 11, 16, 2); // Handle top
+            
+            // 3D Handle grips on ends
+            pumpGraphics.fillStyle(0x654321);
+            pumpGraphics.fillRect(6, 11, 3, 7);  // Left grip front
+            pumpGraphics.fillRect(23, 11, 3, 7); // Right grip front
+            pumpGraphics.fillStyle(0x4A2C2A);
+            pumpGraphics.fillRect(9, 10, 1, 7);   // Left grip right side
+            pumpGraphics.fillRect(26, 10, 1, 7);  // Right grip right side
+            pumpGraphics.fillStyle(0x8B4513);
+            pumpGraphics.fillRect(6, 10, 3, 1);   // Left grip top
+            pumpGraphics.fillRect(23, 10, 3, 1);  // Right grip top
+            
+            // 3D Pump spout
+            pumpGraphics.fillStyle(0x708090);
+            pumpGraphics.fillRect(22, 20, 6, 2);  // Spout front
+            pumpGraphics.fillRect(27, 18, 2, 6);  // Spout down pipe front
+            pumpGraphics.fillStyle(0x556B7D);
+            pumpGraphics.fillRect(28, 20, 1, 2);  // Spout right side
+            pumpGraphics.fillRect(29, 17, 1, 6);  // Spout pipe right side
+            
+            // Metallic highlights and reflections
+            pumpGraphics.fillStyle(0xC0C0C0);
+            pumpGraphics.fillRect(19.5, 16, 0.5, 23); // Shaft highlight
+            pumpGraphics.fillRect(9, 13.5, 14, 0.5); // Handle highlight
+            
+            pumpGraphics.generateTexture('pump-handle', 32, 48);
+            pumpGraphics.destroy();
+        }
+
+        if (!this.textures.exists('pump-handle-pressed')) {
+            // Create pump handle in pressed position (3D side view, handle pushed down)
+            const pumpPressedGraphics = this.add.graphics();
+            
+            // 3D Pump base/platform (same as above)
+            pumpPressedGraphics.fillStyle(0x8B4513);
+            pumpPressedGraphics.fillRect(10, 40, 20, 8); // Platform front
+            pumpPressedGraphics.fillStyle(0x654321);
+            pumpPressedGraphics.fillRect(30, 38, 3, 8);  // Platform right side
+            pumpPressedGraphics.fillStyle(0xA0522D);
+            pumpPressedGraphics.fillRect(13, 37, 20, 3); // Platform top
+            
+            // 3D Pump mechanism housing
+            pumpPressedGraphics.fillStyle(0x2F4F4F);
+            pumpPressedGraphics.fillRect(18, 32, 4, 16); // Housing front
+            pumpPressedGraphics.fillStyle(0x1C1C1C);
+            pumpPressedGraphics.fillRect(22, 30, 2, 16);  // Housing right side
+            pumpPressedGraphics.fillStyle(0x404040);
+            pumpPressedGraphics.fillRect(20, 30, 4, 2);   // Housing top
+            
+            // 3D Vertical pump shaft (compressed when pressed)
+            pumpPressedGraphics.fillStyle(0x708090);
+            pumpPressedGraphics.fillRect(19, 18, 2, 22); // Shaft front (shorter)
+            pumpPressedGraphics.fillStyle(0x556B7D);
+            pumpPressedGraphics.fillRect(21, 17, 1, 22); // Shaft right side
+            
+            // 3D Pump handle (pushed down)
+            pumpPressedGraphics.fillStyle(0x2F4F4F);
+            pumpPressedGraphics.fillRect(8, 16, 16, 3); // Handle front (lower)
+            pumpPressedGraphics.fillStyle(0x1C1C1C);
+            pumpPressedGraphics.fillRect(24, 14, 2, 3);  // Handle right side
+            pumpPressedGraphics.fillStyle(0x404040);
+            pumpPressedGraphics.fillRect(10, 14, 16, 2); // Handle top
+            
+            // 3D Handle grips (moved down)
+            pumpPressedGraphics.fillStyle(0x654321);
+            pumpPressedGraphics.fillRect(6, 14, 3, 7);  // Left grip front
+            pumpPressedGraphics.fillRect(23, 14, 3, 7); // Right grip front
+            pumpPressedGraphics.fillStyle(0x4A2C2A);
+            pumpPressedGraphics.fillRect(9, 13, 1, 7);   // Left grip right side
+            pumpPressedGraphics.fillRect(26, 13, 1, 7);  // Right grip right side
+            pumpPressedGraphics.fillStyle(0x8B4513);
+            pumpPressedGraphics.fillRect(6, 13, 3, 1);   // Left grip top
+            pumpPressedGraphics.fillRect(23, 13, 3, 1);  // Right grip top
+            
+            // 3D Pump spout with water flowing
+            pumpPressedGraphics.fillStyle(0x708090);
+            pumpPressedGraphics.fillRect(22, 20, 6, 2);  // Spout front
+            pumpPressedGraphics.fillRect(27, 18, 2, 6);  // Spout down pipe front
+            pumpPressedGraphics.fillStyle(0x556B7D);
+            pumpPressedGraphics.fillRect(28, 20, 1, 2);  // Spout right side
+            pumpPressedGraphics.fillRect(29, 17, 1, 6);  // Spout pipe right side
+            
+            // 3D Water droplet stream
+            pumpPressedGraphics.fillStyle(0x4169E1);
+            pumpPressedGraphics.fillCircle(29, 25, 1.5); // Main droplet
+            pumpPressedGraphics.fillStyle(0x60A5FA);
+            pumpPressedGraphics.fillCircle(29.5, 25, 0.8); // Droplet highlight
+            pumpPressedGraphics.fillCircle(29, 28, 1);    // Smaller droplet below
+            
+            pumpPressedGraphics.generateTexture('pump-handle-pressed', 32, 48);
+            pumpPressedGraphics.destroy();
+        }
+
+        if (!this.textures.exists('pump-handle')) {
+            // Create pump handle (side view)
+            const pumpGraphics = this.add.graphics();
+            
+            // Pump base/platform
+            pumpGraphics.fillStyle(0x8B4513);
+            pumpGraphics.fillRect(10, 40, 20, 8);
+            
+            // Pump mechanism housing
+            pumpGraphics.fillStyle(0x2F4F4F);
+            pumpGraphics.fillRect(18, 35, 4, 13);
+            
+            // Vertical pump shaft
+            pumpGraphics.fillStyle(0x708090);
+            pumpGraphics.fillRect(19, 15, 2, 25);
+            
+            // Pump handle (horizontal bar at top)
+            pumpGraphics.fillStyle(0x2F4F4F);
+            pumpGraphics.fillRect(8, 13, 16, 3);
+            
+            // Handle grips on ends
+            pumpGraphics.fillStyle(0x654321);
+            pumpGraphics.fillRect(6, 11, 3, 7);
+            pumpGraphics.fillRect(23, 11, 3, 7);
+            
+            // Metallic highlights
+            pumpGraphics.fillStyle(0xC0C0C0);
+            pumpGraphics.fillRect(19.5, 16, 1, 23); // Shaft highlight
+            pumpGraphics.fillRect(9, 13.5, 14, 1); // Handle highlight
+            
+            // Pump spout
+            pumpGraphics.fillStyle(0x708090);
+            pumpGraphics.fillRect(22, 20, 6, 2);
+            pumpGraphics.fillRect(27, 18, 2, 6);
+            
+            pumpGraphics.generateTexture('pump-handle', 32, 48);
+            pumpGraphics.destroy();
+        }
+
+        if (!this.textures.exists('pump-handle-pressed')) {
+            // Create pump handle in pressed position (side view, handle pushed down)
+            const pumpPressedGraphics = this.add.graphics();
+            
+            // Pump base/platform
+            pumpPressedGraphics.fillStyle(0x8B4513);
+            pumpPressedGraphics.fillRect(10, 40, 20, 8);
+            
+            // Pump mechanism housing
+            pumpPressedGraphics.fillStyle(0x2F4F4F);
+            pumpPressedGraphics.fillRect(18, 35, 4, 13);
+            
+            // Vertical pump shaft (extended down when pressed)
+            pumpPressedGraphics.fillStyle(0x708090);
+            pumpPressedGraphics.fillRect(19, 18, 2, 22);
+            
+            // Pump handle (horizontal bar, pushed down)
+            pumpPressedGraphics.fillStyle(0x2F4F4F);
+            pumpPressedGraphics.fillRect(8, 16, 16, 3);
+            
+            // Handle grips on ends (moved down)
+            pumpPressedGraphics.fillStyle(0x654321);
+            pumpPressedGraphics.fillRect(6, 14, 3, 7);
+            pumpPressedGraphics.fillRect(23, 14, 3, 7);
+            
+            // Metallic highlights
+            pumpPressedGraphics.fillStyle(0xC0C0C0);
+            pumpPressedGraphics.fillRect(19.5, 19, 1, 20); // Shaft highlight (shorter)
+            pumpPressedGraphics.fillRect(9, 16.5, 14, 1); // Handle highlight
+            
+            // Pump spout with water droplet
+            pumpPressedGraphics.fillStyle(0x708090);
+            pumpPressedGraphics.fillRect(22, 20, 6, 2);
+            pumpPressedGraphics.fillRect(27, 18, 2, 6);
+            
+            // Water droplet coming out
+            pumpPressedGraphics.fillStyle(0x4169E1);
+            pumpPressedGraphics.fillCircle(29, 25, 1.5);
+            
+            pumpPressedGraphics.generateTexture('pump-handle-pressed', 32, 48);
+            pumpPressedGraphics.destroy();
+        }
     }
 
     initAudio() {
@@ -739,6 +1152,13 @@ class GameScene extends Phaser.Scene {
         // Create a tap turn sound effect
         this.playSound(300, 0.2, 'square', 0.2);
         setTimeout(() => this.playSound(400, 0.1, 'square', 0.15), 100);
+    }
+
+    playPumpSound() {
+        // Create a pump action sound effect - deeper mechanical sound
+        this.playSound(250, 0.3, 'sawtooth', 0.25);
+        setTimeout(() => this.playSound(200, 0.2, 'sawtooth', 0.2), 80);
+        setTimeout(() => this.playSound(280, 0.15, 'square', 0.15), 160);
     }
 
     // Firebase integration methods
@@ -1578,6 +1998,14 @@ class GameScene extends Phaser.Scene {
         this.waterTapHandle = this.add.sprite(100, 100, 'tap-handle-on');
         this.waterTapHandle.setDepth(0.5); // Handle behind characters but above background
 
+        // Create water pump with layered graphics
+        this.pumpWell = this.physics.add.sprite(700, 100, 'pump-well');
+        this.pumpWell.setImmovable(true);
+        this.pumpWell.setDepth(0.2); // Behind characters but above background
+        
+        this.pumpHandle = this.add.sprite(700, 100, 'pump-handle');
+        this.pumpHandle.setDepth(0.5); // Handle behind characters but above background
+
         // Set up input
         this.cursors = this.input.keyboard.createCursorKeys();
         this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
@@ -1592,6 +2020,7 @@ class GameScene extends Phaser.Scene {
         this.raccoonVegetableCollision = this.physics.add.overlap(this.raccoons, this.vegetables, this.raccoonGrabVegetable, null, this);
         this.physics.add.overlap(this.squirrels, this.waterTapBody, this.squirrelUseTap, null, this);
         this.physics.add.overlap(this.gardener, this.waterTapBody, this.gardenerUseTap, null, this);
+        this.physics.add.overlap(this.gardener, this.pumpWell, this.gardenerUsePump, null, this);
 
         // Set up start game button
         document.getElementById('start-game-btn').addEventListener('click', () => {
@@ -2574,6 +3003,10 @@ class GameScene extends Phaser.Scene {
         this.waterTapHandle.setTexture('tap-handle-on');
         this.waterTapBody.setData('isOn', true);
         
+        // Reset water pump
+        this.pumpPressed = false;
+        this.pumpHandle.setTexture('pump-handle');
+        
         // Create vegetables only for the first round
         if (this.round === 1) {
             // First round: clear everything and create new vegetables
@@ -2598,8 +3031,8 @@ class GameScene extends Phaser.Scene {
                 this.vegetables.add(vegetable);
             }
         } else {
-            // For subsequent rounds, reactivate ALL existing vegetables that still exist
-            // This ensures vegetables don't disappear due to state corruption
+            // For subsequent rounds, only reactivate vegetables that were saved from previous round
+            // Vegetables that were lost (marked as inPlay=false) should NOT be recovered
             console.log(`=== ROUND ${this.round} VEGETABLE RECOVERY ===`);
             this.vegetables.children.entries.forEach((vegetable, index) => {
                 // Log position before any modifications
@@ -2609,43 +3042,45 @@ class GameScene extends Phaser.Scene {
                 
                 console.log(`VEGETABLE RECOVERY: Round ${this.round} - vegetable ${index} at (${beforeX}, ${beforeY}), was inPlay: ${wasInPlay}`);
                 
-                // CRITICAL: Ensure ALL remaining vegetables are reactivated for new round
-                // This prevents vegetables from disappearing due to state corruption
-                vegetable.setData('inPlay', true);
-                console.log(`VEGETABLE STATUS CHANGE: Round ${this.round} - forcing vegetable ${index} to inPlay=true`);
-                
-                // Ensure the vegetable is properly active and visible for the new round
-                vegetable.setActive(true);
-                vegetable.setVisible(true);
-                
-                // Log position after setActive/setVisible
-                console.log(`VEGETABLE POSITION TRACKING: Round ${this.round} - vegetable ${index} AFTER setActive/setVisible: (${vegetable.x}, ${vegetable.y})`);
-                
-                // Stabilize physics - ensure vegetable is completely stationary
-                if (vegetable.body) {
-                    vegetable.body.setVelocity(0, 0);
-                    vegetable.body.setAngularVelocity(0);
-                    vegetable.body.setAcceleration(0, 0);
-                    console.log(`VEGETABLE POSITION TRACKING: Round ${this.round} - vegetable ${index} physics stabilized`);
-                }
-                
-                // Ensure vegetables start with normal appearance
-                vegetable.setScale(1.0);
-                vegetable.setTint(0xffffff);
-                vegetable.setAlpha(1.0);
-                
-                // Log final position after all modifications
-                const afterX = vegetable.x;
-                const afterY = vegetable.y;
-                console.log(`VEGETABLE POSITION TRACKING: Round ${this.round} - vegetable ${index} FINAL position: (${afterX}, ${afterY})`);
-                
-                // Check if position changed during reactivation
-                if (Math.abs(afterX - beforeX) > 0.001 || Math.abs(afterY - beforeY) > 0.001) {
-                    console.warn(`VEGETABLE POSITION CHANGE DETECTED: Round ${this.round} - vegetable ${index} moved from (${beforeX}, ${beforeY}) to (${afterX}, ${afterY}) during reactivation!`);
-                }
-                
-                if (!wasInPlay) {
-                    console.log(`VEGETABLE RECOVERY SUCCESS: Round ${this.round} - recovered vegetable ${index} that was marked as not in play`);
+                // ONLY reactivate vegetables that were still in play at the end of the previous round
+                if (wasInPlay) {
+                    // Ensure the vegetable is properly active and visible for the new round
+                    vegetable.setActive(true);
+                    vegetable.setVisible(true);
+                    
+                    // Log position after setActive/setVisible
+                    console.log(`VEGETABLE POSITION TRACKING: Round ${this.round} - vegetable ${index} AFTER setActive/setVisible: (${vegetable.x}, ${vegetable.y})`);
+                    
+                    // Stabilize physics - ensure vegetable is completely stationary
+                    if (vegetable.body) {
+                        vegetable.body.setVelocity(0, 0);
+                        vegetable.body.setAngularVelocity(0);
+                        vegetable.body.setAcceleration(0, 0);
+                        console.log(`VEGETABLE POSITION TRACKING: Round ${this.round} - vegetable ${index} physics stabilized`);
+                    }
+                    
+                    // Ensure vegetables start with normal appearance
+                    vegetable.setScale(1.0);
+                    vegetable.setTint(0xffffff);
+                    vegetable.setAlpha(1.0);
+                    
+                    // Log final position after all modifications
+                    const afterX = vegetable.x;
+                    const afterY = vegetable.y;
+                    console.log(`VEGETABLE POSITION TRACKING: Round ${this.round} - vegetable ${index} FINAL position: (${afterX}, ${afterY})`);
+                    
+                    // Check if position changed during reactivation
+                    if (Math.abs(afterX - beforeX) > 0.001 || Math.abs(afterY - beforeY) > 0.001) {
+                        console.warn(`VEGETABLE POSITION CHANGE DETECTED: Round ${this.round} - vegetable ${index} moved from (${beforeX}, ${beforeY}) to (${afterX}, ${afterY}) during reactivation!`);
+                    }
+                    
+                    console.log(`VEGETABLE RECOVERY SUCCESS: Round ${this.round} - vegetable ${index} restored for new round`);
+                } else {
+                    // Vegetable was lost in previous round - keep it out of play
+                    vegetable.setActive(false);
+                    vegetable.setVisible(false);
+                    vegetable.setData('inPlay', false);
+                    console.log(`VEGETABLE LOST: Round ${this.round} - vegetable ${index} remains out of play (was lost in previous round)`);
                 }
             });
             console.log(`=== END ROUND ${this.round} VEGETABLE RECOVERY ===`);
@@ -2653,11 +3088,22 @@ class GameScene extends Phaser.Scene {
         
         // Count remaining vegetables (for all rounds)
         this.vegetablesLeft = 0;
-        this.vegetables.children.entries.forEach(vegetable => {
-            if (vegetable.getData('inPlay')) {
+        console.log(`=== VEGETABLE COUNTING DEBUG ===`);
+        this.vegetables.children.entries.forEach((vegetable, index) => {
+            const isInPlay = vegetable.getData('inPlay');
+            const isActive = vegetable.active;
+            const isVisible = vegetable.visible;
+            console.log(`Count check - Vegetable ${index}: inPlay=${isInPlay}, active=${isActive}, visible=${isVisible}`);
+            
+            if (isInPlay) {
                 this.vegetablesLeft++;
+                console.log(`  -> COUNTED: vegetable ${index} added to count (total now: ${this.vegetablesLeft})`);
+            } else {
+                console.log(`  -> SKIPPED: vegetable ${index} not counted (inPlay=false)`);
             }
         });
+        console.log(`Final vegetablesLeft count: ${this.vegetablesLeft}`);
+        console.log(`=== END VEGETABLE COUNTING DEBUG ===`);
         
         this.updateUI();
         
@@ -2682,6 +3128,8 @@ class GameScene extends Phaser.Scene {
             this.roundActive = true;
             this.lastTimerUpdate = 0; // Reset timer when round becomes active
             this.roundStarting = false; // Round is now fully started
+            
+            console.log(`ROUND ACTIVATION: Round ${this.round} is now active. roundActive=${this.roundActive}, gamePaused=${this.gamePaused}`);
             
             // Re-enable animal-vegetable collision detection for new round
             this.squirrelVegetableCollision.active = true;
@@ -2813,6 +3261,11 @@ class GameScene extends Phaser.Scene {
         // Gardener movement (directional with arrow keys or mobile controls)
         this.gardener.setVelocity(0);
         let isMoving = false;
+        
+        // DEBUG: Track if movement code is being reached in Round 2
+        if (this.round === 2) {
+            console.log(`GARDENER MOVEMENT DEBUG: Round 2 - roundActive=${this.roundActive}, gamePaused=${this.gamePaused}, gameStarted=${this.gameStarted}`);
+        }
         
         // Get joystick analog values first to determine input mode
         // For movement: use movementX/Y which includes distance (variable speed)
@@ -3251,6 +3704,10 @@ class GameScene extends Phaser.Scene {
 
         // Only check win/lose conditions when round is active
         if (this.roundActive) {
+            // Update vegetable count to keep dashboard accurate
+            this.updateVegetableCount();
+            this.updateUI();
+            
             // Check win/lose conditions
             // Count all vegetables still in play (either in field or being carried)
             const vegetablesInField = this.vegetables.children.entries.filter(veg => 
@@ -3356,7 +3813,9 @@ class GameScene extends Phaser.Scene {
         // Drop vegetables carried by squirrels
         this.squirrels.children.entries.forEach((squirrel, squirrelIndex) => {
             const targetVegetable = squirrel.getData('targetVegetable');
-            if (targetVegetable && targetVegetable.active) {
+            const squirrelState = squirrel.getData('state');
+            // Only process vegetables that are actually being CARRIED, not just targeted/sought
+            if (targetVegetable && targetVegetable.active && squirrelState === 'carrying') {
                 // Check if this vegetable has already been processed
                 if (processedVegetables.has(targetVegetable)) {
                     console.log(`Squirrel ${squirrelIndex} - SKIPPING already processed vegetable at (${Math.round(targetVegetable.x)}, ${Math.round(targetVegetable.y)})`);
@@ -3614,7 +4073,10 @@ class GameScene extends Phaser.Scene {
         this.vegetables.children.entries.forEach((vegetable, index) => {
             const active = vegetable.active;
             const inPlay = vegetable.getData('inPlay');
-            if (active && inPlay) {
+            const beingCarried = this.isVegetableBeingCarried(vegetable);
+            
+            // Count vegetables that are either in play OR being carried (still saveable)
+            if (active && (inPlay || beingCarried)) {
                 this.vegetablesLeft++;
             }
         });
@@ -4085,6 +4547,38 @@ class GameScene extends Phaser.Scene {
         }
     }
 
+    gardenerUsePump(gardener, pump) {
+        // Check for both keyboard and mobile spray input
+        const sprayJustPressed = Phaser.Input.Keyboard.JustDown(this.spaceKey) || this.mobileControls.sprayJustPressed;
+        const currentTime = this.time.now;
+        
+        // Allow pumping if player presses spacebar/spray button and enough time has passed
+        if (sprayJustPressed && (currentTime - this.lastPumpTime) > this.pumpCooldown) {
+            // Pump water - add water to the tank
+            this.waterLevel += this.waterPumpRate;
+            this.waterLevel = Math.min(this.maxWaterLevel, this.waterLevel); // Don't exceed max
+            
+            // Visual feedback - show pump handle pressed
+            this.pumpPressed = true;
+            this.pumpHandle.setTexture('pump-handle-pressed');
+            
+            // Reset handle after short delay
+            this.time.delayedCall(100, () => {
+                this.pumpPressed = false;
+                this.pumpHandle.setTexture('pump-handle');
+            });
+            
+            // Update pump timing
+            this.lastPumpTime = currentTime;
+            
+            // Update UI immediately
+            this.updateWaterLevelDisplay();
+            
+            // Play pump sound
+            this.playPumpSound();
+        }
+    }
+
     checkGardenerTapInteraction() {
         // Check if gardener is close enough to tap
         const distance = Phaser.Math.Distance.Between(
@@ -4406,6 +4900,10 @@ class GameScene extends Phaser.Scene {
         this.waterTapHandle.setTexture('tap-handle-on');
         this.waterTapBody.setData('isOn', true);
         
+        // Reset water pump
+        this.pumpPressed = false;
+        this.pumpHandle.setTexture('pump-handle');
+        
         // Stop background music (but don't change button state)
         this.stopBackgroundMusic();
         
@@ -4479,34 +4977,22 @@ class GameScene extends Phaser.Scene {
         console.log('Vegetables before updateVegetableCount():');
         this.vegetables.children.entries.forEach((veg, index) => {
             console.log(`  Vegetable ${index}: active=${veg.active}, inPlay=${veg.getData('inPlay')}, visible=${veg.visible}, x=${Math.round(veg.x)}, y=${Math.round(veg.y)}`);
-            // Log precise coordinates for position tracking
-            console.log(`VEGETABLE POSITION TRACKING: Round ${this.round} END - vegetable ${index} precise position: (${veg.x}, ${veg.y})`);
         });
-        console.log(`vegetablesLeft before update: ${this.vegetablesLeft}`);
         
-        // First, make sure we have the most up-to-date vegetable count
+        // Update vegetable count using the standard method
         this.updateVegetableCount();
+        console.log(`Vegetables remaining (inPlay): ${this.vegetablesLeft}`);
         
-        console.log(`vegetablesLeft after update: ${this.vegetablesLeft}`);
-        
-        // Count vegetables actually still in the field (not grabbed by animals)
-        const vegetablesInField = this.vegetables.children.entries.filter(veg => 
-            veg.active && veg.getData('inPlay')
-        ).length;
-        
-        // Calculate remaining vegetables (vegetables that will be available for next round)
-        // For time expiry scenarios: vegetablesInField already includes dropped vegetables,
-        // so we don't need to add them separately to avoid double-counting
-        // For non-time expiry scenarios: no vegetables were dropped, so just use vegetablesInField
-        const remainingVegetables = vegetablesInField;
+        // Use the correct count - vegetables that are still in play
+        const remainingVegetables = this.vegetablesLeft;
         
         // Score is based on remaining vegetables (what actually continues to next round)
         const pointsScored = remainingVegetables;
-        this.score += pointsScored;
         
-        console.log(`vegetablesInField counted: ${vegetablesInField}`);
-        console.log(`remainingVegetables (total for next round): ${remainingVegetables}`);
+        console.log(`FINAL SCORING: ${remainingVegetables} vegetables continue to next round = +${pointsScored} points`);
         console.log('=== END ROUND DEBUG ===');
+        
+        this.score += pointsScored;
         
         // Store current round number before any modifications
         const currentRound = this.round;
@@ -4514,7 +5000,7 @@ class GameScene extends Phaser.Scene {
         // Determine why the round ended
         const roundEndedByTime = this.timeLeft <= 0;
         const vegetablesBeingCarried = this.countVegetablesBeingCarried();
-        const totalVegetablesInPlay = vegetablesInField + vegetablesBeingCarried;
+        const totalVegetablesInPlay = remainingVegetables + vegetablesBeingCarried;
         const roundEndedByVegetables = totalVegetablesInPlay === 0;
         
         // Show round end notification using remaining vegetables
@@ -4616,6 +5102,10 @@ class GameScene extends Phaser.Scene {
         this.waterTapHandle.setTexture('tap-handle-on');
         this.waterTapBody.setData('isOn', true);
         
+        // Reset water pump
+        this.pumpPressed = false;
+        this.pumpHandle.setTexture('pump-handle');
+        
         // Resume physics if paused
         if (this.physics.world.isPaused) {
             this.physics.resume();
@@ -4691,11 +5181,8 @@ class GameScene extends Phaser.Scene {
             // Deplete water when spraying
             this.waterLevel -= this.waterDepletionRate * deltaSeconds;
             this.waterLevel = Math.max(0, this.waterLevel); // Don't go below 0
-        } else {
-            // Refill water when not spraying
-            this.waterLevel += this.waterRefillRate * deltaSeconds;
-            this.waterLevel = Math.min(this.maxWaterLevel, this.waterLevel); // Don't exceed max
         }
+        // Note: No automatic refill - water must be pumped manually!
         
         // Update UI immediately when water level changes
         this.updateWaterLevelDisplay();

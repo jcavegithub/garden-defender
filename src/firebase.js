@@ -224,8 +224,8 @@ class FirebaseManager {
       
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        // Only return saves for the current user
-        if (data.userId === this.user.uid) {
+        // Only return saves for the current user, excluding autosaves
+        if (data.userId === this.user.uid && data.saveName !== 'autosave') {
           savedGames.push({
             id: doc.id,
             saveName: data.saveName,
