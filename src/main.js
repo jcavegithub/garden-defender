@@ -1916,6 +1916,100 @@ class GameScene extends Phaser.Scene {
         });
     }
 
+    async showQuitConfirmationDialog() {
+        return new Promise((resolve) => {
+            // Create modal backdrop
+            const backdrop = document.createElement('div');
+            backdrop.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 2000;
+            `;
+
+            // Create dialog container
+            const dialog = document.createElement('div');
+            dialog.style.cssText = `
+                background: linear-gradient(135deg, rgba(139, 69, 19, 0.95), rgba(160, 82, 45, 0.95));
+                border: 3px solid #8b4513;
+                border-radius: 15px;
+                padding: 30px;
+                text-align: center;
+                color: white;
+                font-family: Arial, sans-serif;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+                max-width: 400px;
+                width: 90%;
+            `;
+
+            dialog.innerHTML = `
+                <h2 style="margin-top: 0; color: #ffa500; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);">
+                    🚪 Quit Game
+                </h2>
+                <p style="margin: 20px 0; font-size: 18px;">
+                    Are you sure you want to quit your current game?
+                </p>
+                <p style="margin: 10px 0; font-size: 14px; color: #ffcccb;">
+                    ⚠️ Your current progress will be lost unless you save first!
+                </p>
+                <div style="margin-top: 25px;">
+                    <button id="quit-confirm-btn" style="background: linear-gradient(45deg, #dc143c, #b22222); 
+                           color: white; border: none; padding: 12px 24px; margin: 0 8px; 
+                           border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer;
+                           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);">
+                        🚪 Yes, Quit
+                    </button>
+                    <button id="quit-cancel-btn" style="background: linear-gradient(45deg, #32cd32, #228b22); 
+                           color: white; border: none; padding: 12px 24px; margin: 0 8px; 
+                           border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer;
+                           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);">
+                        🎮 Keep Playing
+                    </button>
+                </div>
+            `;
+
+            backdrop.appendChild(dialog);
+            document.body.appendChild(backdrop);
+
+            const closeDialog = (shouldQuit) => {
+                document.body.removeChild(backdrop);
+                resolve(shouldQuit);
+            };
+
+            // Confirm button
+            dialog.querySelector('#quit-confirm-btn').addEventListener('click', () => {
+                closeDialog(true);
+            });
+
+            // Cancel button
+            dialog.querySelector('#quit-cancel-btn').addEventListener('click', () => {
+                closeDialog(false);
+            });
+
+            // Close on backdrop click
+            backdrop.addEventListener('click', (e) => {
+                if (e.target === backdrop) {
+                    closeDialog(false);
+                }
+            });
+
+            // Handle Escape key
+            const handleEscape = (e) => {
+                if (e.key === 'Escape') {
+                    document.removeEventListener('keydown', handleEscape);
+                    closeDialog(false);
+                }
+            };
+            document.addEventListener('keydown', handleEscape);
+        });
+    }
+
     showSaveSuccessMessage(saveName) {
         this.showMessage(`Game saved as "${saveName}"!`, 2000);
     }
@@ -2099,20 +2193,20 @@ class GameScene extends Phaser.Scene {
                 quitGameBtn.addEventListener('click', (e) => {
                     e.preventDefault();
                     console.log('Quit button clicked via addEventListener');
-                    gameScene.quitGame();
+                    gameScene.confirmAndQuitGame();
                 });
                 
                 quitGameBtn.addEventListener('touchend', (e) => {
                     e.preventDefault();
                     console.log('Quit button touched via addEventListener');
-                    gameScene.quitGame();
+                    gameScene.confirmAndQuitGame();
                 });
                 
                 // Also add onclick as backup with proper context
                 quitGameBtn.onclick = (e) => {
                     e.preventDefault();
                     console.log('Quit button clicked via onclick');
-                    gameScene.quitGame();
+                    gameScene.confirmAndQuitGame();
                 };
                 
                 console.log('Quit button event listeners added with proper context');
@@ -3213,7 +3307,7 @@ class GameScene extends Phaser.Scene {
 
         // Handle quit game
         if (Phaser.Input.Keyboard.JustDown(this.escapeKey)) {
-            this.quitGame();
+            this.confirmAndQuitGame();
             return; // Exit early since we've quit
         }
 
@@ -4834,6 +4928,19 @@ class GameScene extends Phaser.Scene {
         }
         
         raccoon.destroy();
+    }
+
+    async confirmAndQuitGame() {
+        // Only show confirmation if a game is actually running
+        if (this.gameStarted) {
+            const shouldQuit = await this.showQuitConfirmationDialog();
+            if (shouldQuit) {
+                this.quitGame();
+            }
+        } else {
+            // If no game is running, quit immediately
+            this.quitGame();
+        }
     }
 
     quitGame() {
