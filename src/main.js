@@ -4178,7 +4178,7 @@ class GameScene extends Phaser.Scene {
 
     sprayWater() {
         // Check if there's enough water to spray
-        if (this.waterLevel <= 20) {
+        if (this.waterLevel <= 0) {
             this.isSpraying = false;
             return; // Can't spray without water
         }
