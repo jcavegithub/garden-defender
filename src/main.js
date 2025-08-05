@@ -10,6 +10,7 @@ class GameScene extends Phaser.Scene {
         this.vegetables = null;
         this.squirrels = null;
         this.raccoons = null;
+        this.gophers = null;
         this.waterSpray = null;
         this.cursors = null;
         this.spaceKey = null;
@@ -20,8 +21,25 @@ class GameScene extends Phaser.Scene {
         this.vegetablesLeft = 0;
         this.squirrelSpawnRate = 3000; // milliseconds
         this.raccoonSpawnRate = 8000; // Less frequent than squirrels
+        this.gopherSpawnRate = 6000; // Medium frequency between squirrels and raccoons
+        this.rabbitSpawnRate = 7000; // Medium-high frequency for hopping rabbits
         this.lastSquirrelSpawn = 0;
         this.lastRaccoonSpawn = 0;
+        this.lastGopherSpawn = 0;
+        this.lastRabbitSpawn = 0;
+        
+        // Animal control settings - admin configurable
+        this.animalSettings = {
+            squirrels: { enabled: true, startRound: 1 },
+            raccoons: { enabled: true, startRound: 2 },
+            gophers: { enabled: true, startRound: 3 },
+            rabbits: { enabled: true, startRound: 4 }
+        };
+        
+        // Game settings - admin configurable
+        this.gameSettings = {
+            roundDuration: 60 // Default 60 seconds
+        };
         this.gameTimer = null;
         this.lastTimerUpdate = 0; // For manual timer handling
         this.roundActive = false; // Start as false until game is started
@@ -321,6 +339,154 @@ class GameScene extends Phaser.Scene {
         
             raccoonGraphics.generateTexture('raccoon', 48, 48); // Increased by 50%: 32*1.5=48
             raccoonGraphics.destroy();
+        }
+
+        if (!this.textures.exists('gopher')) {
+            // Create realistic gopher sprite - 50% larger
+            const gopherGraphics = this.add.graphics();
+        
+        // Body (brown, smaller and rounder than squirrel)
+        gopherGraphics.fillStyle(0x8B4513);
+        gopherGraphics.fillCircle(18, 24, 10.5); // Scaled by 1.5: 12*1.5=18, 16*1.5=24, 7*1.5=10.5
+        
+        // Head (lighter brown)
+        gopherGraphics.fillStyle(0xA0522D);
+        gopherGraphics.fillCircle(18, 15, 9); // Scaled by 1.5: 12*1.5=18, 10*1.5=15, 6*1.5=9
+        
+        // Characteristic large front teeth (white)
+        gopherGraphics.fillStyle(0xFFFFFF);
+        gopherGraphics.fillRect(15, 18, 2.25, 6); // Scaled by 1.5: 10*1.5=15, 12*1.5=18, 1.5*1.5=2.25, 4*1.5=6
+        gopherGraphics.fillRect(20.25, 18, 2.25, 6); // Scaled by 1.5: 13.5*1.5=20.25, 12*1.5=18, 1.5*1.5=2.25, 4*1.5=6
+        
+        // Eyes (small, black - gophers have poor eyesight)
+        gopherGraphics.fillStyle(0x000000);
+        gopherGraphics.fillCircle(13.5, 12, 1.5); // Scaled by 1.5: 9*1.5=13.5, 8*1.5=12, 1*1.5=1.5
+        gopherGraphics.fillCircle(22.5, 12, 1.5); // Scaled by 1.5: 15*1.5=22.5, 8*1.5=12, 1*1.5=1.5
+        
+        // Nose (pink, small)
+        gopherGraphics.fillStyle(0xFFB6C1);
+        gopherGraphics.fillCircle(18, 15, 1.5); // Scaled by 1.5: 12*1.5=18, 10*1.5=15, 1*1.5=1.5
+        
+        // Ears (small, barely visible - gophers have tiny ears)
+        gopherGraphics.fillStyle(0x654321);
+        gopherGraphics.fillCircle(12, 9, 2.25); // Scaled by 1.5: 8*1.5=12, 6*1.5=9, 1.5*1.5=2.25
+        gopherGraphics.fillCircle(24, 9, 2.25); // Scaled by 1.5: 16*1.5=24, 6*1.5=9, 1.5*1.5=2.25
+        
+        // Short, stubby tail
+        gopherGraphics.fillStyle(0x8B4513);
+        gopherGraphics.fillCircle(24, 30, 3); // Scaled by 1.5: 16*1.5=24, 20*1.5=30, 2*1.5=3
+        
+        // Strong digging claws (dark)
+        gopherGraphics.fillStyle(0x2F2F2F);
+        gopherGraphics.fillCircle(9, 30, 3); // Scaled by 1.5: 6*1.5=9, 20*1.5=30, 2*1.5=3
+        gopherGraphics.fillCircle(27, 30, 3); // Scaled by 1.5: 18*1.5=27, 20*1.5=30, 2*1.5=3
+        
+        // Belly (lighter brown)
+        gopherGraphics.fillStyle(0xCD853F);
+        gopherGraphics.fillCircle(18, 24, 6); // Scaled by 1.5: 12*1.5=18, 16*1.5=24, 4*1.5=6
+        
+            gopherGraphics.generateTexture('gopher', 36, 36); // Increased by 50%: 24*1.5=36
+            gopherGraphics.destroy();
+        }
+
+        if (!this.textures.exists('rabbit')) {
+            // Create hopping rabbit sprite
+            const rabbitGraphics = this.add.graphics();
+            
+            // Body (light gray/brown)
+            rabbitGraphics.fillStyle(0xD2B48C);
+            rabbitGraphics.fillEllipse(16, 20, 12, 16); // Oval body
+            
+            // Head (slightly lighter)
+            rabbitGraphics.fillStyle(0xF5DEB3);
+            rabbitGraphics.fillEllipse(16, 10, 10, 12); // Oval head
+            
+            // Long ears (signature rabbit feature)
+            rabbitGraphics.fillStyle(0xD2B48C);
+            rabbitGraphics.fillEllipse(12, 4, 3, 10); // Left ear
+            rabbitGraphics.fillEllipse(20, 4, 3, 10); // Right ear
+            
+            // Inner ears (pink)
+            rabbitGraphics.fillStyle(0xFFB6C1);
+            rabbitGraphics.fillEllipse(12, 5, 1.5, 6); // Left inner ear
+            rabbitGraphics.fillEllipse(20, 5, 1.5, 6); // Right inner ear
+            
+            // Eyes (large, dark)
+            rabbitGraphics.fillStyle(0x000000);
+            rabbitGraphics.fillCircle(13, 9, 2); // Left eye
+            rabbitGraphics.fillCircle(19, 9, 2); // Right eye
+            
+            // Eye highlights (white)
+            rabbitGraphics.fillStyle(0xFFFFFF);
+            rabbitGraphics.fillCircle(13.5, 8.5, 0.5); // Left eye highlight
+            rabbitGraphics.fillCircle(19.5, 8.5, 0.5); // Right eye highlight
+            
+            // Nose (pink, triangular)
+            rabbitGraphics.fillStyle(0xFFB6C1);
+            rabbitGraphics.fillTriangle(16, 12, 15, 14, 17, 14); // Small triangular nose
+            
+            // Mouth (small curved line)
+            rabbitGraphics.lineStyle(1, 0x000000);
+            rabbitGraphics.beginPath();
+            rabbitGraphics.arc(16, 15, 2, 0, Math.PI, false);
+            rabbitGraphics.strokePath();
+            
+            // Whiskers
+            rabbitGraphics.lineStyle(1, 0x000000);
+            rabbitGraphics.lineBetween(8, 12, 12, 13); // Left whisker
+            rabbitGraphics.lineBetween(20, 13, 24, 12); // Right whisker
+            
+            // Cotton tail (white, fluffy)
+            rabbitGraphics.fillStyle(0xFFFFFF);
+            rabbitGraphics.fillCircle(16, 28, 3); // Round fluffy tail
+            
+            // Powerful hind legs (for hopping)
+            rabbitGraphics.fillStyle(0xD2B48C);
+            rabbitGraphics.fillEllipse(11, 26, 4, 8); // Left hind leg
+            rabbitGraphics.fillEllipse(21, 26, 4, 8); // Right hind leg
+            
+            // Front paws (smaller)
+            rabbitGraphics.fillStyle(0xD2B48C);
+            rabbitGraphics.fillCircle(13, 22, 2); // Left front paw
+            rabbitGraphics.fillCircle(19, 22, 2); // Right front paw
+            
+            // Belly highlight (lighter)
+            rabbitGraphics.fillStyle(0xFFFAF0);
+            rabbitGraphics.fillEllipse(16, 22, 6, 10); // Belly area
+            
+            rabbitGraphics.generateTexture('rabbit', 32, 32);
+            rabbitGraphics.destroy();
+        }
+
+        if (!this.textures.exists('dirt-mound')) {
+            // Create dirt mound sprite for gopher underground trail
+            const dirtMoundGraphics = this.add.graphics();
+            
+            // Base dirt mound (brown)
+            dirtMoundGraphics.fillStyle(0x8B4513);
+            dirtMoundGraphics.fillEllipse(8, 8, 12, 6); // Main mound shape
+            
+            // Darker soil (shadows)
+            dirtMoundGraphics.fillStyle(0x654321);
+            dirtMoundGraphics.fillEllipse(6, 10, 8, 4); // Left shadow
+            dirtMoundGraphics.fillEllipse(10, 10, 8, 4); // Right shadow
+            
+            // Loose dirt particles
+            dirtMoundGraphics.fillStyle(0xA0522D);
+            dirtMoundGraphics.fillCircle(4, 9, 1); // Small dirt clump
+            dirtMoundGraphics.fillCircle(12, 8, 1); // Small dirt clump
+            dirtMoundGraphics.fillCircle(8, 11, 1); // Small dirt clump
+            dirtMoundGraphics.fillCircle(6, 7, 1); // Small dirt clump
+            dirtMoundGraphics.fillCircle(10, 6, 1); // Small dirt clump
+            
+            // Highlights (lighter soil)
+            dirtMoundGraphics.fillStyle(0xD2B48C);
+            dirtMoundGraphics.fillEllipse(8, 6, 6, 3); // Top highlight
+            dirtMoundGraphics.fillCircle(5, 8, 0.5); // Small highlight
+            dirtMoundGraphics.fillCircle(11, 7, 0.5); // Small highlight
+            
+            dirtMoundGraphics.generateTexture('dirt-mound', 16, 16);
+            dirtMoundGraphics.destroy();
         }
 
         if (!this.textures.exists('carrot')) {
@@ -1161,6 +1327,12 @@ class GameScene extends Phaser.Scene {
         setTimeout(() => this.playSound(280, 0.15, 'square', 0.15), 160);
     }
 
+    playRabbitHopSound() {
+        // Create a soft hopping sound effect (higher pitched bounces)
+        this.playSound(600, 0.1, 'triangle', 0.1);
+        setTimeout(() => this.playSound(700, 0.08, 'triangle', 0.08), 50);
+    }
+
     // Firebase integration methods
     async loadTopScores() {
         try {
@@ -1251,6 +1423,11 @@ class GameScene extends Phaser.Scene {
                     savedState.vegetables.forEach(vegData => {
                         if (vegData.inPlay) {
                             const vegetable = this.physics.add.sprite(vegData.x, vegData.y, vegData.texture);
+                            
+                            // Set smaller collision body for more precise collision detection
+                            vegetable.body.setSize(18, 18); // Reduce from default sprite size to more accurate collision
+                            vegetable.body.setOffset(7, 7); // Center the collision body on the sprite
+                            
                             vegetable.setData('inPlay', vegData.inPlay);
                             // Ensure restored vegetables have normal appearance
                             vegetable.setScale(1.0);
@@ -2022,6 +2199,501 @@ class GameScene extends Phaser.Scene {
         }
     }
 
+    async clearAllHighScores() {
+        try {
+            console.log('Clearing all high scores...');
+            const deletedCount = await this.firebaseManager.clearAllHighScores();
+            if (deletedCount !== false) {
+                // Clear the local cache
+                this.topScores = [];
+                // Update the display
+                this.updateHighScoreDisplay();
+                // Show success message
+                this.showMessage(`Cleared ${deletedCount} high scores successfully!`, 3000);
+                console.log(`High scores cleared successfully: ${deletedCount} records deleted`);
+                return true;
+            } else {
+                this.showMessage('Failed to clear high scores. Please try again.', 3000);
+                console.error('Failed to clear high scores');
+                return false;
+            }
+        } catch (error) {
+            console.error('Error clearing high scores:', error);
+            this.showMessage('Error clearing high scores. Please check console.', 3000);
+            return false;
+        }
+    }
+
+    setupAdminPanel() {
+        const adminTrigger = document.getElementById('admin-trigger');
+        const adminPanel = document.getElementById('admin-panel');
+        const adminClearBtn = document.getElementById('admin-clear-scores-btn');
+        const adminCloseBtn = document.getElementById('admin-close-btn');
+        
+        if (!adminTrigger || !adminPanel || !adminClearBtn || !adminCloseBtn) {
+            console.error('Admin panel elements not found:', {
+                adminTrigger: !!adminTrigger,
+                adminPanel: !!adminPanel,
+                adminClearBtn: !!adminClearBtn,
+                adminCloseBtn: !!adminCloseBtn
+            });
+            return;
+        }
+
+        // Ensure admin trigger is properly initialized for interaction
+        adminTrigger.style.pointerEvents = 'auto';
+        adminTrigger.style.display = 'block';
+        adminTrigger.style.position = 'fixed';
+        console.log('Admin trigger initialized with pointer events enabled');
+
+        // Debug mode toggle - press Ctrl+Shift+D to toggle debug visibility
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey && e.code === 'KeyD') {
+                e.preventDefault();
+                document.body.classList.toggle('debug');
+                const isDebug = document.body.classList.contains('debug');
+                console.log(`Admin trigger debug mode: ${isDebug ? 'ON' : 'OFF'}`);
+                
+                if (isDebug) {
+                    // Force the admin trigger to be visible and on top
+                    adminTrigger.style.display = 'block';
+                    adminTrigger.style.position = 'fixed';
+                    adminTrigger.style.zIndex = '99999';
+                    adminTrigger.style.pointerEvents = 'auto';
+                    
+                    // Add a visible label
+                    let debugLabel = document.getElementById('debug-label');
+                    if (!debugLabel) {
+                        debugLabel = document.createElement('div');
+                        debugLabel.id = 'debug-label';
+                        debugLabel.style.cssText = `
+                            position: fixed;
+                            bottom: 60px;
+                            left: 10px;
+                            background: rgba(255, 0, 0, 0.9);
+                            color: white;
+                            padding: 5px 10px;
+                            border-radius: 5px;
+                            font-size: 12px;
+                            font-weight: bold;
+                            z-index: 100000;
+                            pointer-events: none;
+                        `;
+                        debugLabel.textContent = '⬇ ADMIN TRIGGER (Hold 3s)';
+                        document.body.appendChild(debugLabel);
+                    }
+                    
+                    this.showMessage('DEBUG: Red pulsing circle should be visible in bottom-left corner', 4000);
+                } else {
+                    // Remove debug label
+                    const debugLabel = document.getElementById('debug-label');
+                    if (debugLabel) {
+                        debugLabel.remove();
+                    }
+                    this.showMessage('Admin trigger is now hidden', 2000);
+                }
+                
+                // Log element info for debugging
+                const rect = adminTrigger.getBoundingClientRect();
+                console.log('Admin trigger debug info:', {
+                    element: adminTrigger,
+                    visible: isDebug,
+                    position: rect,
+                    styles: {
+                        display: adminTrigger.style.display,
+                        opacity: adminTrigger.style.opacity,
+                        zIndex: adminTrigger.style.zIndex,
+                        position: adminTrigger.style.position
+                    }
+                });
+            }
+        });
+
+        // Log button position for debugging
+        const rect = adminTrigger.getBoundingClientRect();
+        console.log('Admin trigger positioned at:', {
+            x: rect.left,
+            y: rect.top,
+            width: rect.width,
+            height: rect.height,
+            bottom: window.innerHeight - rect.bottom,
+            left: rect.left
+        });
+
+        let holdTimer = null;
+        let isHolding = false;
+        
+        // Show admin panel
+        const showAdminPanel = () => {
+            console.log('Admin panel accessed');
+            adminPanel.classList.add('active');
+            // Play admin access sound
+            this.playSound(800, 0.2, 'sine', 0.3);
+            setTimeout(() => this.playSound(1000, 0.2, 'sine', 0.3), 100);
+        };
+        
+        // Hide admin panel
+        const hideAdminPanel = () => {
+            adminPanel.classList.remove('active');
+        };
+
+        // Touch/Mouse start events
+        const startHold = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            isHolding = true;
+            console.log('Admin trigger hold started:', {
+                type: e.type,
+                x: e.clientX || (e.touches && e.touches[0]?.clientX),
+                y: e.clientY || (e.touches && e.touches[0]?.clientY),
+                target: e.target.id
+            });
+            
+            // Slight haptic feedback if available (mobile)
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+            
+            // Visual feedback for desktop users (more noticeable)
+            adminTrigger.style.opacity = '0.3';
+            adminTrigger.style.background = 'rgba(255, 255, 255, 0.3)';
+            adminTrigger.style.borderRadius = '50%';
+            adminTrigger.style.border = '2px solid rgba(255, 255, 255, 0.5)';
+            adminTrigger.style.transform = 'scale(1.1)';
+            adminTrigger.style.boxShadow = '0 0 10px rgba(255, 255, 255, 0.5)';
+            
+            holdTimer = setTimeout(() => {
+                if (isHolding) {
+                    console.log('Admin hold timer completed - showing panel');
+                    showAdminPanel();
+                }
+            }, 3000); // 3 second hold
+        };
+
+        // Touch/Mouse end events
+        const endHold = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            isHolding = false;
+            console.log('Admin trigger hold ended:', {
+                type: e.type,
+                hadTimer: !!holdTimer
+            });
+            
+            // Reset visual feedback
+            adminTrigger.style.opacity = '0';
+            adminTrigger.style.background = 'transparent';
+            adminTrigger.style.borderRadius = '';
+            adminTrigger.style.border = '';
+            adminTrigger.style.transform = '';
+            adminTrigger.style.boxShadow = '';
+            
+            if (holdTimer) {
+                clearTimeout(holdTimer);
+                holdTimer = null;
+            }
+        };
+
+        // Admin trigger events
+        adminTrigger.addEventListener('mousedown', startHold);
+        adminTrigger.addEventListener('mouseup', endHold);
+        adminTrigger.addEventListener('mouseleave', endHold);
+        adminTrigger.addEventListener('touchstart', startHold, { passive: false });
+        adminTrigger.addEventListener('touchend', endHold, { passive: false });
+        adminTrigger.addEventListener('touchcancel', endHold, { passive: false });
+
+        // Debug: Add click event to test if element is receiving events
+        adminTrigger.addEventListener('click', (e) => {
+            console.log('Admin trigger clicked - events working!', {
+                target: e.target.id,
+                x: e.clientX,
+                y: e.clientY
+            });
+        });
+
+        // Desktop keyboard alternative: Ctrl+Shift+A (admin) for 3 seconds
+        let keyHoldTimer = null;
+        let isKeyHolding = false;
+        
+        document.addEventListener('keydown', (e) => {
+            // Only on start screen (when game hasn't started)
+            if (!this.gameStarted && e.ctrlKey && e.shiftKey && e.code === 'KeyA') {
+                e.preventDefault();
+                if (!isKeyHolding) {
+                    isKeyHolding = true;
+                    console.log('Admin keyboard shortcut hold started');
+                    keyHoldTimer = setTimeout(() => {
+                        if (isKeyHolding) {
+                            console.log('Admin panel accessed via keyboard shortcut');
+                            showAdminPanel();
+                        }
+                    }, 3000);
+                }
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            if (e.ctrlKey || e.shiftKey || e.code === 'KeyA') {
+                isKeyHolding = false;
+                if (keyHoldTimer) {
+                    clearTimeout(keyHoldTimer);
+                    keyHoldTimer = null;
+                }
+            }
+        });
+
+        // Clear high scores with confirmation
+        adminClearBtn.addEventListener('click', async () => {
+            console.log('Admin clear scores button clicked');
+            
+            // Enhanced confirmation dialog for admin
+            const confirmed = confirm('🔧 ADMINISTRATOR ACTION\n\nAre you sure you want to clear ALL high scores?\n\nThis will permanently delete all score records from the database.\n\nThis action cannot be undone.');
+            
+            if (confirmed) {
+                console.log('Admin confirmed clearing high scores');
+                const success = await this.clearAllHighScores();
+                if (success) {
+                    console.log('High scores cleared successfully by admin');
+                    // Play success sound
+                    this.playSound(600, 0.3, 'sine', 0.3);
+                    setTimeout(() => this.playSound(800, 0.3, 'sine', 0.3), 200);
+                } else {
+                    console.log('Failed to clear high scores');
+                    // Play error sound
+                    this.playSound(200, 0.5, 'square', 0.3);
+                }
+            } else {
+                console.log('Admin cancelled clearing high scores');
+            }
+        });
+
+        // Animal control event listeners
+        this.setupAdminControls();
+
+        // Close admin panel
+        adminCloseBtn.addEventListener('click', () => {
+            console.log('Admin panel closed');
+            hideAdminPanel();
+            // Play close sound
+            this.playSound(400, 0.2, 'sine', 0.2);
+        });
+
+        // Close panel when clicking outside
+        adminPanel.addEventListener('click', (e) => {
+            if (e.target === adminPanel) {
+                hideAdminPanel();
+            }
+        });
+
+        // Close panel with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && adminPanel.classList.contains('active')) {
+                hideAdminPanel();
+            }
+        });
+    }
+
+    setupAdminControls() {
+        // Load saved settings from localStorage
+        this.loadAnimalSettings();
+        this.loadGameSettings();
+        
+        // Initialize UI controls with current settings
+        this.updateAnimalControlsUI();
+        this.updateGameSettingsUI();
+        
+        // Set up event listeners for animal controls
+        const animalTypes = ['squirrel', 'raccoon', 'gopher', 'rabbit'];
+        
+        animalTypes.forEach(animalType => {
+            // Toggle switch event listener
+            const toggleElement = document.getElementById(`${animalType}-enabled`);
+            if (toggleElement) {
+                toggleElement.addEventListener('change', (e) => {
+                    const animalKey = animalType + 's'; // Convert to plural for settings key
+                    this.animalSettings[animalKey].enabled = e.target.checked;
+                    this.saveAnimalSettings();
+                    console.log(`${animalType} spawning ${e.target.checked ? 'enabled' : 'disabled'}`);
+                    
+                    // Play feedback sound
+                    this.playSound(e.target.checked ? 600 : 400, 0.2, 'sine', 0.2);
+                });
+            }
+            
+            // Start round selector event listener
+            const roundElement = document.getElementById(`${animalType}-start-round`);
+            if (roundElement) {
+                roundElement.addEventListener('change', (e) => {
+                    const animalKey = animalType + 's'; // Convert to plural for settings key
+                    this.animalSettings[animalKey].startRound = parseInt(e.target.value);
+                    this.saveAnimalSettings();
+                    console.log(`${animalType} will start spawning from round ${e.target.value}`);
+                    
+                    // Play feedback sound
+                    this.playSound(500, 0.2, 'sine', 0.2);
+                });
+            }
+        });
+        
+        // Round duration selector event listener
+        const durationElement = document.getElementById('round-duration');
+        if (durationElement) {
+            durationElement.addEventListener('change', (e) => {
+                this.gameSettings.roundDuration = parseInt(e.target.value);
+                this.saveGameSettings();
+                console.log(`Round duration set to ${e.target.value} seconds`);
+                
+                // Play feedback sound
+                this.playSound(700, 0.2, 'sine', 0.2);
+            });
+        }
+        
+        // Restore defaults button event listener
+        const restoreDefaultsBtn = document.getElementById('admin-restore-defaults-btn');
+        if (restoreDefaultsBtn) {
+            restoreDefaultsBtn.addEventListener('click', () => {
+                // Enhanced confirmation dialog
+                const confirmed = confirm('🔧 RESTORE DEFAULTS\n\nAre you sure you want to restore all admin settings to their default values?\n\nThis will reset:\n• All animal spawning settings\n• Round duration settings\n\nThis action cannot be undone.');
+                
+                if (confirmed) {
+                    this.restoreDefaultSettings();
+                    console.log('Admin settings restored to defaults');
+                    
+                    // Play success sound sequence
+                    this.playSound(523, 0.2, 'sine', 0.3); // C note
+                    setTimeout(() => this.playSound(659, 0.2, 'sine', 0.3), 150); // E note
+                    setTimeout(() => this.playSound(784, 0.3, 'sine', 0.3), 300); // G note
+                    
+                    // Optional: Show a brief message
+                    if (this.showMessage) {
+                        this.showMessage('🔧 Settings restored to defaults!', 2000);
+                    }
+                } else {
+                    console.log('Restore defaults cancelled');
+                }
+            });
+        }
+    }
+
+    loadAnimalSettings() {
+        const savedSettings = localStorage.getItem('gardenDefenderAnimalSettings');
+        if (savedSettings) {
+            try {
+                const parsedSettings = JSON.parse(savedSettings);
+                // Merge with defaults to ensure all properties exist
+                this.animalSettings = {
+                    squirrels: { enabled: true, startRound: 1, ...parsedSettings.squirrels },
+                    raccoons: { enabled: true, startRound: 2, ...parsedSettings.raccoons },
+                    gophers: { enabled: true, startRound: 3, ...parsedSettings.gophers },
+                    rabbits: { enabled: true, startRound: 4, ...parsedSettings.rabbits }
+                };
+                console.log('Loaded animal settings:', this.animalSettings);
+            } catch (error) {
+                console.warn('Failed to load animal settings, using defaults:', error);
+            }
+        }
+    }
+
+    saveAnimalSettings() {
+        try {
+            localStorage.setItem('gardenDefenderAnimalSettings', JSON.stringify(this.animalSettings));
+            console.log('Animal settings saved:', this.animalSettings);
+        } catch (error) {
+            console.warn('Failed to save animal settings:', error);
+        }
+    }
+
+    loadGameSettings() {
+        const savedSettings = localStorage.getItem('gardenDefenderGameSettings');
+        if (savedSettings) {
+            try {
+                const parsedSettings = JSON.parse(savedSettings);
+                // Merge with defaults to ensure all properties exist
+                this.gameSettings = {
+                    roundDuration: 60, // Default
+                    ...parsedSettings
+                };
+                console.log('Loaded game settings:', this.gameSettings);
+            } catch (error) {
+                console.warn('Failed to load game settings, using defaults:', error);
+            }
+        }
+    }
+
+    saveGameSettings() {
+        try {
+            localStorage.setItem('gardenDefenderGameSettings', JSON.stringify(this.gameSettings));
+            console.log('Game settings saved:', this.gameSettings);
+        } catch (error) {
+            console.warn('Failed to save game settings:', error);
+        }
+    }
+
+    restoreDefaultSettings() {
+        // Define default settings (same as constructor)
+        const defaultAnimalSettings = {
+            squirrels: { enabled: true, startRound: 1 },
+            raccoons: { enabled: true, startRound: 2 },
+            gophers: { enabled: true, startRound: 3 },
+            rabbits: { enabled: true, startRound: 4 }
+        };
+        
+        const defaultGameSettings = {
+            roundDuration: 60 // Default 60 seconds
+        };
+        
+        // Reset settings to defaults
+        this.animalSettings = { ...defaultAnimalSettings };
+        this.gameSettings = { ...defaultGameSettings };
+        
+        // Save the defaults to localStorage
+        this.saveAnimalSettings();
+        this.saveGameSettings();
+        
+        // Update the UI to reflect the default settings
+        this.updateAnimalControlsUI();
+        this.updateGameSettingsUI();
+        
+        console.log('Settings restored to defaults:', {
+            animalSettings: this.animalSettings,
+            gameSettings: this.gameSettings
+        });
+    }
+
+    updateAnimalControlsUI() {
+        // Update UI controls to match current settings
+        const animalTypes = [
+            { key: 'squirrels', prefix: 'squirrel' },
+            { key: 'raccoons', prefix: 'raccoon' },
+            { key: 'gophers', prefix: 'gopher' },
+            { key: 'rabbits', prefix: 'rabbit' }
+        ];
+        
+        animalTypes.forEach(({ key, prefix }) => {
+            const settings = this.animalSettings[key];
+            
+            // Update toggle switch
+            const toggleElement = document.getElementById(`${prefix}-enabled`);
+            if (toggleElement) {
+                toggleElement.checked = settings.enabled;
+            }
+            
+            // Update round selector
+            const roundElement = document.getElementById(`${prefix}-start-round`);
+            if (roundElement) {
+                roundElement.value = settings.startRound.toString();
+            }
+        });
+    }
+
+    updateGameSettingsUI() {
+        // Update round duration selector
+        const durationElement = document.getElementById('round-duration');
+        if (durationElement) {
+            durationElement.value = this.gameSettings.roundDuration.toString();
+        }
+    }
+
     create() {
         // Initialize Firebase
         if (!this.firebaseManager) {
@@ -2047,7 +2719,10 @@ class GameScene extends Phaser.Scene {
         this.vegetables = this.physics.add.group();
         this.squirrels = this.physics.add.group();
         this.raccoons = this.physics.add.group();
+        this.gophers = this.physics.add.group();
+        this.rabbits = this.physics.add.group();
         this.waterSpray = this.physics.add.group();
+        this.dirtMounds = this.physics.add.group();
 
         // Create gardener
         this.gardener = this.physics.add.sprite(400, 300, 'gardener');
@@ -2109,9 +2784,13 @@ class GameScene extends Phaser.Scene {
         // Set up collisions
         this.physics.add.overlap(this.waterSpray, this.squirrels, this.hitSquirrel, null, this);
         this.physics.add.overlap(this.waterSpray, this.raccoons, this.hitRaccoon, null, this);
+        this.physics.add.overlap(this.waterSpray, this.gophers, this.hitGopher, null, this);
+        this.physics.add.overlap(this.waterSpray, this.rabbits, this.hitRabbit, null, this);
         // Store references to animal-vegetable collisions so we can disable them when needed
         this.squirrelVegetableCollision = this.physics.add.overlap(this.squirrels, this.vegetables, this.squirrelGrabVegetable, null, this);
         this.raccoonVegetableCollision = this.physics.add.overlap(this.raccoons, this.vegetables, this.raccoonGrabVegetable, null, this);
+        this.gopherVegetableCollision = this.physics.add.overlap(this.gophers, this.vegetables, this.gopherGrabVegetable, null, this);
+        this.rabbitVegetableCollision = this.physics.add.overlap(this.rabbits, this.vegetables, this.rabbitGrabVegetable, null, this);
         this.physics.add.overlap(this.squirrels, this.waterTapBody, this.squirrelUseTap, null, this);
         this.physics.add.overlap(this.gardener, this.waterTapBody, this.gardenerUseTap, null, this);
         this.physics.add.overlap(this.gardener, this.pumpWell, this.gardenerUsePump, null, this);
@@ -2270,6 +2949,9 @@ class GameScene extends Phaser.Scene {
                 }
             });
         }
+
+        // Secret Admin Panel Setup
+        this.setupAdminPanel();
         
         setupQuitButton();
 
@@ -3070,9 +3752,13 @@ class GameScene extends Phaser.Scene {
         // All rounds now use the delay system
         this.roundActive = false; // Keep inactive until message disappears
         
-        this.timeLeft = 60;
+        this.timeLeft = this.gameSettings.roundDuration; // Use admin-configurable duration
         this.squirrelSpawnRate = Math.max(1000, 3000 - (this.round - 1) * 200);
         this.raccoonSpawnRate = Math.max(4000, 8000 - (this.round - 1) * 300);
+        // Gopher spawn rate: starts in round 3 (6000ms), then gets faster
+        this.gopherSpawnRate = Math.max(3000, 6000 - Math.max(0, this.round - 3) * 400);
+        // Rabbit spawn rate: starts in round 2, hops erratically
+        this.rabbitSpawnRate = Math.max(3500, 7000 - Math.max(0, this.round - 2) * 350);
         
         // Calculate dynamic speeds based on round - slower in early rounds
         const speedMultiplier = Math.min(1.0, 0.6 + (this.round - 1) * 0.08); // Start at 60% speed, increase 8% per round, cap at 100%
@@ -3083,6 +3769,13 @@ class GameScene extends Phaser.Scene {
         this.raccoonSeekSpeed = Math.floor(80 * speedMultiplier);
         this.raccoonCarrySpeed = Math.floor(80 * speedMultiplier);
         this.raccoonFleeSpeed = Math.floor(150 * speedMultiplier);
+        this.gopherSeekSpeed = Math.floor(90 * speedMultiplier);
+        this.gopherBurrowSpeed = Math.floor(60 * speedMultiplier); // Slower when burrowed
+        this.gopherCarrySpeed = Math.floor(70 * speedMultiplier);
+        this.gopherFleeSpeed = Math.floor(140 * speedMultiplier);
+        this.rabbitHopSpeed = Math.floor(320 * speedMultiplier); // Massive hops - increased from 180 to 320
+        this.rabbitCarrySpeed = Math.floor(280 * speedMultiplier); // Huge hops when carrying - increased from 140 to 280
+        this.rabbitFleeSpeed = Math.floor(450 * speedMultiplier); // Enormous panic hops - increased from 250 to 450
         
         // Calculate tap chance - disabled in round 1, then increases each round
         this.squirrelTapChance = this.round === 1 ? 0 : Math.min(0.002, 0.0005 + (this.round - 2) * 0.0003); // Start at 0% in round 1, 0.05% in round 2, increase 0.03% per round, cap at 0.2%
@@ -3090,6 +3783,11 @@ class GameScene extends Phaser.Scene {
         // Clear existing enemies but preserve vegetables after round 1
         this.squirrels.clear(true, true);
         this.raccoons.clear(true, true);
+        this.gophers.clear(true, true);
+        this.rabbits.clear(true, true);
+        
+        // Clear all dirt mounds from previous round
+        this.dirtMounds.clear(true, true);
         
         // Reset water tap
         this.waterEnabled = true;
@@ -3116,6 +3814,11 @@ class GameScene extends Phaser.Scene {
                 
                 const vegetableType = vegetableTypes[Math.floor(Math.random() * vegetableTypes.length)];
                 const vegetable = this.physics.add.sprite(x, y, vegetableType);
+                
+                // Set smaller collision body for more precise collision detection
+                vegetable.body.setSize(18, 18); // Reduce from default sprite size to more accurate collision
+                vegetable.body.setOffset(7, 7); // Center the collision body on the sprite
+                
                 vegetable.setData('inPlay', true);
                 // Ensure vegetables start with normal appearance
                 vegetable.setScale(1.0);
@@ -3228,6 +3931,8 @@ class GameScene extends Phaser.Scene {
             // Re-enable animal-vegetable collision detection for new round
             this.squirrelVegetableCollision.active = true;
             this.raccoonVegetableCollision.active = true;
+            this.gopherVegetableCollision.active = true;
+            this.rabbitVegetableCollision.active = true;
         });
     }
 
@@ -3773,16 +4478,36 @@ class GameScene extends Phaser.Scene {
 
         // Only spawn animals and run timer when round is actually active
         if (this.roundActive) {
-            // Spawn squirrels
-            if (time - this.lastSquirrelSpawn > this.squirrelSpawnRate) {
+            // Spawn squirrels (admin configurable)
+            if (this.animalSettings.squirrels.enabled && 
+                this.round >= this.animalSettings.squirrels.startRound &&
+                time - this.lastSquirrelSpawn > this.squirrelSpawnRate) {
                 this.spawnSquirrel();
                 this.lastSquirrelSpawn = time;
             }
 
-            // Spawn raccoons (less frequently and not in first round)
-            if (this.round > 1 && time - this.lastRaccoonSpawn > this.raccoonSpawnRate) {
+            // Spawn raccoons (admin configurable)
+            if (this.animalSettings.raccoons.enabled && 
+                this.round >= this.animalSettings.raccoons.startRound &&
+                time - this.lastRaccoonSpawn > this.raccoonSpawnRate) {
                 this.spawnRaccoon();
                 this.lastRaccoonSpawn = time;
+            }
+
+            // Spawn gophers (admin configurable)
+            if (this.animalSettings.gophers.enabled && 
+                this.round >= this.animalSettings.gophers.startRound &&
+                time - this.lastGopherSpawn > this.gopherSpawnRate) {
+                this.spawnGopher();
+                this.lastGopherSpawn = time;
+            }
+
+            // Spawn rabbits (admin configurable)
+            if (this.animalSettings.rabbits.enabled && 
+                this.round >= this.animalSettings.rabbits.startRound &&
+                time - this.lastRabbitSpawn > this.rabbitSpawnRate) {
+                this.spawnRabbit();
+                this.lastRabbitSpawn = time;
             }
         }
 
@@ -3794,6 +4519,36 @@ class GameScene extends Phaser.Scene {
         // Update raccoons
         this.raccoons.children.entries.forEach(raccoon => {
             this.updateRaccoon(raccoon);
+        });
+
+        // Update gophers
+        this.gophers.children.entries.forEach(gopher => {
+            this.updateGopher(gopher);
+        });
+
+        // Update rabbits
+        this.rabbits.children.entries.forEach(rabbit => {
+            this.updateRabbit(rabbit);
+        });
+
+        // Update dirt mounds (fade out over time)
+        this.dirtMounds.children.entries.forEach(mound => {
+            const fadeTimer = mound.getData('fadeTimer');
+            if (fadeTimer > 0) {
+                const newFadeTimer = fadeTimer - 16; // Assume ~60fps
+                mound.setData('fadeTimer', newFadeTimer);
+                
+                // Fade out over the last 500ms
+                if (newFadeTimer <= 500) {
+                    const alpha = newFadeTimer / 500;
+                    mound.setAlpha(alpha);
+                }
+                
+                // Remove when fully faded
+                if (newFadeTimer <= 0) {
+                    mound.destroy();
+                }
+            }
         });
 
         // Only check win/lose conditions when round is active
@@ -3825,6 +4580,7 @@ class GameScene extends Phaser.Scene {
                         // Disable animal-vegetable collision detection to prevent re-grabbing
                         this.squirrelVegetableCollision.active = false;
                         this.raccoonVegetableCollision.active = false;
+                        this.rabbitVegetableCollision.active = false;
                         
                         // Wait a moment for vegetables to be properly registered, then end round
                         this.time.delayedCall(200, () => {
@@ -3873,6 +4629,14 @@ class GameScene extends Phaser.Scene {
             const carriedVegetables = raccoon.getData('carriedVegetables') || [];
             const activeCarried = carriedVegetables.filter(veg => veg && veg.active);
             carriedCount += activeCarried.length;
+        });
+        
+        // Count vegetables carried by gophers
+        this.gophers.children.entries.forEach((gopher, index) => {
+            const targetVegetable = gopher.getData('targetVegetable');
+            if (targetVegetable && targetVegetable.active) {
+                carriedCount++;
+            }
         });
         
         return carriedCount;
@@ -4146,6 +4910,97 @@ class GameScene extends Phaser.Scene {
             });
         });
         
+        // Drop vegetables carried by gophers
+        this.gophers.children.entries.forEach((gopher, gopherIndex) => {
+            const targetVegetable = gopher.getData('targetVegetable');
+            const gopherState = gopher.getData('state');
+            // Only process vegetables that are actually being CARRIED, not just targeted/sought
+            if (targetVegetable && targetVegetable.active && gopherState === 'carrying') {
+                // Check if this vegetable has already been processed
+                if (processedVegetables.has(targetVegetable)) {
+                    console.log(`Gopher ${gopherIndex} - SKIPPING already processed vegetable at (${Math.round(targetVegetable.x)}, ${Math.round(targetVegetable.y)})`);
+                    // Clear the gopher's reference since vegetable was already processed
+                    gopher.setData('targetVegetable', null);
+                    gopher.setData('state', 'seeking');
+                    return; // Skip this gopher
+                }
+                
+                // Mark this vegetable as processed
+                processedVegetables.add(targetVegetable);
+                
+                // CRITICAL: Capture animal position IMMEDIATELY before any state changes
+                const animalDropPosition = { x: gopher.x, y: gopher.y };
+                
+                console.log(`Processing gopher ${gopherIndex} at (${Math.round(animalDropPosition.x)}, ${Math.round(animalDropPosition.y)}) carrying vegetable at (${Math.round(targetVegetable.x)}, ${Math.round(targetVegetable.y)})`);
+                
+                // Clear the gopher's reference FIRST to prevent position updates
+                gopher.setData('targetVegetable', null);
+                gopher.setData('state', 'seeking');
+                
+                // Check if gopher is outside play boundaries using captured position
+                const isOutside = animalDropPosition.x < playBounds.left || animalDropPosition.x > playBounds.right || 
+                                animalDropPosition.y < playBounds.top || animalDropPosition.y > playBounds.bottom;
+                
+                console.log(`Gopher ${gopherIndex} boundary check: gopher at (${Math.round(animalDropPosition.x)}, ${Math.round(animalDropPosition.y)}), isOutside=${isOutside}`);
+                
+                if (isOutside) {
+                    // Animal is outside boundaries - vegetable is lost (out of play)
+                    console.log(`VEGETABLE STATUS CHANGE: Gopher ${gopherIndex} outside bounds - vegetable at (${targetVegetable.x}, ${targetVegetable.y}) lost - setting inPlay to false`);
+                    targetVegetable.setData('inPlay', false);
+                    targetVegetable.setVisible(false);
+                    targetVegetable.setActive(false);
+                    lostCount++;
+                } else {
+                    // Animal is within boundaries - drop vegetable where it currently is
+                    // Check if vegetable itself is outside bounds - if so, it's lost
+                    const vegX = targetVegetable.x;
+                    const vegY = targetVegetable.y;
+                    const isVegOutside = vegX < playBounds.left || vegX > playBounds.right ||
+                                       vegY < playBounds.top || vegY > playBounds.bottom;
+                    
+                    console.log(`Gopher vegetable boundary check: x=${vegX}, y=${vegY}, bounds: left=${playBounds.left}, right=${playBounds.right}, top=${playBounds.top}, bottom=${playBounds.bottom}, isOutside=${isVegOutside}`);
+                    
+                    if (isVegOutside) {
+                        // Vegetable is outside bounds - mark as lost
+                        console.log(`VEGETABLE STATUS CHANGE: Gopher ${gopherIndex} vegetable at (${vegX}, ${vegY}) marked as lost due to boundary violation - setting inPlay to false`);
+                        targetVegetable.setData('inPlay', false);
+                        targetVegetable.setVisible(false);
+                        targetVegetable.setActive(false);
+                        lostCount++;
+                    } else {
+                        // Vegetable is within bounds - keep it in play
+                        console.log(`VEGETABLE STATUS CHANGE: Gopher ${gopherIndex} vegetable at (${vegX}, ${vegY}) kept in play - setting inPlay to true`);
+                        
+                        // Track position changes during drop operations
+                        const posBeforeDrop = { x: targetVegetable.x, y: targetVegetable.y };
+                        console.log(`DROP POSITION TRACKING: Gopher vegetable position before drop operations: (${posBeforeDrop.x}, ${posBeforeDrop.y})`);
+                        
+                        targetVegetable.setData('inPlay', true);
+                        targetVegetable.setVisible(true);
+                        targetVegetable.setActive(true);
+                        targetVegetable.alpha = 1; // Ensure full opacity
+                        targetVegetable.setDepth(1); // Reset depth to default (same as animal body)
+                        
+                        // Ensure it has a physics body and is enabled
+                        if (targetVegetable.body) {
+                            targetVegetable.body.enable = true;
+                        }
+                        
+                        // Make sure it's part of the vegetables group
+                        const wasInGroup = this.vegetables.contains(targetVegetable);
+                        if (!wasInGroup) {
+                            this.vegetables.add(targetVegetable);
+                        }
+                        
+                        const posAfterDrop = { x: targetVegetable.x, y: targetVegetable.y };
+                        console.log(`DROP POSITION TRACKING: Gopher vegetable final position after drop operations: (${posAfterDrop.x}, ${posAfterDrop.y})`);
+                        
+                        droppedCount++;
+                    }
+                }
+            }
+        });
+        
         console.log(`Dropped ${droppedCount} vegetables. ${lostCount} vegetables lost outside boundaries.`);
         
         // Update the vegetable count immediately
@@ -4247,6 +5102,11 @@ class GameScene extends Phaser.Scene {
         }
 
         const squirrel = this.physics.add.sprite(x, y, 'squirrel');
+        
+        // Set smaller collision body for more precise collision detection
+        squirrel.body.setSize(18, 18); // Reduce from default sprite size to more accurate collision
+        squirrel.body.setOffset(5, 5); // Center the collision body on the sprite
+        
         squirrel.setData('hasVegetable', false);
         squirrel.setData('targetVegetable', null);
         squirrel.setData('state', 'seeking'); // seeking, carrying, fleeing, goingToTap
@@ -4280,6 +5140,11 @@ class GameScene extends Phaser.Scene {
         }
 
         const raccoon = this.physics.add.sprite(x, y, 'raccoon');
+        
+        // Set smaller collision body for more precise collision detection
+        raccoon.body.setSize(22, 22); // Reduce from default sprite size to more accurate collision
+        raccoon.body.setOffset(5, 5); // Center the collision body on the sprite
+        
         raccoon.setData('vegetablesCarried', 0); // Can carry up to 2
         raccoon.setData('carriedVegetables', []); // Array of vegetable objects
         raccoon.setData('targetVegetable', null);
@@ -4710,6 +5575,14 @@ class GameScene extends Phaser.Scene {
             }
         }
         
+        // Check if any gopher is carrying this vegetable
+        for (let gopher of this.gophers.children.entries) {
+            const targetVegetable = gopher.getData('targetVegetable');
+            if (targetVegetable === vegetable && gopher.getData('state') === 'carrying') {
+                return true;
+            }
+        }
+        
         return false;
     }
 
@@ -4930,6 +5803,932 @@ class GameScene extends Phaser.Scene {
         raccoon.destroy();
     }
 
+    spawnGopher() {
+        const side = Math.floor(Math.random() * 4);
+        let x, y;
+        
+        switch (side) {
+            case 0: // top
+                x = Math.random() * 800;
+                y = -32;
+                break;
+            case 1: // right
+                x = 832;
+                y = Math.random() * 600;
+                break;
+            case 2: // bottom
+                x = Math.random() * 800;
+                y = 632;
+                break;
+            case 3: // left
+                x = -32;
+                y = Math.random() * 600;
+                break;
+        }
+
+        const gopher = this.physics.add.sprite(x, y, 'gopher');
+        
+        // Set smaller collision body for more precise collision detection
+        gopher.body.setSize(18, 18); // Reduce from default sprite size to more accurate collision
+        gopher.body.setOffset(5, 5); // Center the collision body on the sprite
+        
+        gopher.setData('targetVegetable', null);
+        gopher.setData('state', 'seeking'); // seeking, burrowing, underground, surfacing, carrying, fleeing
+        gopher.setData('burrowTimer', 0); // Time until next burrow/surface
+        gopher.setData('undergroundTarget', null); // Target position while underground
+        gopher.setData('animationTimer', 0); // For movement animation
+        gopher.setData('lastMoundTime', 0); // Time since last dirt mound was created
+        gopher.setData('dirtMounds', []); // Array to track dirt mounds created by this gopher
+        gopher.setDepth(1); // Set depth same as animal body
+        this.gophers.add(gopher);
+    }
+
+    updateGopher(gopher) {
+        const state = gopher.getData('state');
+        let isMoving = false;
+        
+        // Update burrow timer
+        const burrowTimer = gopher.getData('burrowTimer');
+        if (burrowTimer > 0) {
+            gopher.setData('burrowTimer', burrowTimer - 16); // Assume ~60fps
+        }
+        
+        if (state === 'seeking') {
+            // Random chance to burrow (5% per frame when timer is ready)
+            if (burrowTimer <= 0 && Math.random() < 0.05) {
+                gopher.setData('state', 'burrowing');
+                gopher.setData('burrowTimer', 1000); // 1 second burrowing animation
+                return;
+            }
+            
+            // Seek nearest vegetable
+            let closestVegetable = null;
+            let closestDistance = Infinity;
+            
+            this.vegetables.children.entries.forEach(vegetable => {
+                if (vegetable.active && vegetable.getData('inPlay') && !this.isVegetableBeingCarried(vegetable)) {
+                    const distance = Phaser.Math.Distance.Between(gopher.x, gopher.y, vegetable.x, vegetable.y);
+                    if (distance < closestDistance) {
+                        closestDistance = distance;
+                        closestVegetable = vegetable;
+                    }
+                }
+            });
+            
+            if (closestVegetable) {
+                gopher.setData('targetVegetable', closestVegetable);
+                const angle = Phaser.Math.Angle.Between(gopher.x, gopher.y, closestVegetable.x, closestVegetable.y);
+                gopher.setVelocity(Math.cos(angle) * this.gopherSeekSpeed, Math.sin(angle) * this.gopherSeekSpeed);
+                isMoving = true;
+            }
+        } else if (state === 'burrowing') {
+            // Stop movement and create initial dirt mound during burrowing
+            gopher.setVelocity(0, 0);
+            const fadeProgress = (1000 - burrowTimer) / 1000;
+            gopher.setAlpha(1 - fadeProgress);
+            
+            if (burrowTimer <= 0) {
+                // Finished burrowing, go underground
+                gopher.setData('state', 'underground');
+                gopher.setData('burrowTimer', Math.random() * 2000 + 1000); // 1-3 seconds underground
+                gopher.setData('lastMoundTime', 0); // Reset mound timer
+                
+                // Hide gopher completely when underground (no translucent effect)
+                gopher.setVisible(false);
+                gopher.setDepth(0); // Below other objects
+                // Don't disable physics body - we need it for movement underground
+                // gopher.body.setEnable(false); // Disable physics body to prevent interactions
+                
+                // Create initial dirt mound at burrow entrance
+                const entryMound = this.physics.add.sprite(gopher.x, gopher.y, 'dirt-mound');
+                entryMound.setDepth(0.5); // Above ground but below animals
+                entryMound.setData('fadeTimer', 3000); // Fade after 3 seconds
+                this.dirtMounds.add(entryMound);
+                
+                // Track this mound for cleanup
+                const gipherMounds = gopher.getData('dirtMounds');
+                gipherMounds.push(entryMound);
+                gopher.setData('dirtMounds', gipherMounds);
+                
+                // Set underground target near a vegetable
+                let targetVegetable = gopher.getData('targetVegetable');
+                if (!targetVegetable || !targetVegetable.active || !targetVegetable.getData('inPlay')) {
+                    // Find new target
+                    this.vegetables.children.entries.forEach(vegetable => {
+                        if (vegetable.active && vegetable.getData('inPlay') && !this.isVegetableBeingCarried(vegetable)) {
+                            targetVegetable = vegetable;
+                        }
+                    });
+                }
+                
+                if (targetVegetable) {
+                    gopher.setData('undergroundTarget', { x: targetVegetable.x, y: targetVegetable.y });
+                }
+            }
+        } else if (state === 'underground') {
+            // Move underground towards target (immune to water spray)
+            const target = gopher.getData('undergroundTarget');
+            if (target) {
+                const angle = Phaser.Math.Angle.Between(gopher.x, gopher.y, target.x, target.y);
+                gopher.setVelocity(Math.cos(angle) * this.gopherBurrowSpeed, Math.sin(angle) * this.gopherBurrowSpeed);
+                
+                // Create dirt mounds periodically along the underground path
+                const lastMoundTime = gopher.getData('lastMoundTime');
+                const currentTime = Date.now(); // Use more reliable timing
+                
+                if (currentTime - lastMoundTime > 200) { // Create mound every 200ms while moving underground
+                    const mound = this.physics.add.sprite(gopher.x, gopher.y, 'dirt-mound');
+                    mound.setDepth(0.5); // Above ground but below animals
+                    mound.setData('fadeTimer', 2000); // Fade after 2 seconds
+                    this.dirtMounds.add(mound);
+                    
+                    // Track this mound for cleanup
+                    const gipherMounds = gopher.getData('dirtMounds');
+                    gipherMounds.push(mound);
+                    gopher.setData('dirtMounds', gipherMounds);
+                    gopher.setData('lastMoundTime', currentTime);
+                }
+                
+                // Check if reached target or timer expired
+                const distance = Phaser.Math.Distance.Between(gopher.x, gopher.y, target.x, target.y);
+                if (distance < 30 || burrowTimer <= 0) {
+                    gopher.setData('state', 'surfacing');
+                    gopher.setData('burrowTimer', 500); // 0.5 seconds to surface
+                }
+                isMoving = true;
+            } else if (burrowTimer <= 0) {
+                // No target, surface anyway
+                gopher.setData('state', 'surfacing');
+                gopher.setData('burrowTimer', 500);
+            }
+        } else if (state === 'surfacing') {
+            // Stop movement and create exit mound during surfacing
+            gopher.setVelocity(0, 0);
+            
+            if (burrowTimer === 500) { // Just started surfacing
+                // Create exit dirt mound
+                const exitMound = this.physics.add.sprite(gopher.x, gopher.y, 'dirt-mound');
+                exitMound.setDepth(0.5); // Above ground but below animals
+                exitMound.setData('fadeTimer', 3000); // Fade after 3 seconds
+                this.dirtMounds.add(exitMound);
+                
+                // Track this mound for cleanup
+                const gipherMounds = gopher.getData('dirtMounds');
+                gipherMounds.push(exitMound);
+                gopher.setData('dirtMounds', gipherMounds);
+            }
+            
+            const fadeProgress = (500 - burrowTimer) / 500;
+            gopher.setAlpha(fadeProgress); // Fade in from 0 to 1.0
+            gopher.setVisible(fadeProgress > 0.1); // Become visible when mostly faded in
+            
+            if (burrowTimer <= 0) {
+                // Finished surfacing
+                gopher.setData('state', 'seeking');
+                gopher.setData('burrowTimer', Math.random() * 3000 + 2000); // 2-5 seconds before next burrow
+                gopher.setAlpha(1.0);
+                gopher.setVisible(true);
+                gopher.setDepth(1);
+                // gopher.body.setEnable(true); // Re-enable physics body
+                gopher.setData('undergroundTarget', null);
+            }
+        } else if (state === 'carrying') {
+            // Carry vegetable to edge (same as squirrel behavior)
+            const centerX = 400, centerY = 300;
+            const dirX = gopher.x - centerX;
+            const dirY = gopher.y - centerY;
+            const length = Math.sqrt(dirX * dirX + dirY * dirY);
+            
+            if (length > 0) {
+                gopher.setVelocity((dirX / length) * this.gopherCarrySpeed, (dirY / length) * this.gopherCarrySpeed);
+                isMoving = true;
+            }
+            
+            // Position vegetable with gopher
+            const vegetable = gopher.getData('targetVegetable');
+            if (vegetable && vegetable.active) {
+                vegetable.setPosition(gopher.x, gopher.y - 10);
+                vegetable.setDepth(2); // Above animal
+                vegetable.setAlpha(0.8); // Slightly transparent when carried
+            }
+
+            // Remove when off screen
+            if (gopher.x < -50 || gopher.x > 850 || gopher.y < -50 || gopher.y > 650) {
+                this.gopherEscape(gopher);
+            }
+        } else if (state === 'fleeing') {
+            // Run away from center (can burrow to escape faster)
+            const centerX = 400, centerY = 300;
+            const dirX = gopher.x - centerX;
+            const dirY = gopher.y - centerY;
+            const length = Math.sqrt(dirX * dirX + dirY * dirY);
+            
+            if (length > 0) {
+                gopher.setVelocity((dirX / length) * this.gopherFleeSpeed, (dirY / length) * this.gopherFleeSpeed);
+                isMoving = true;
+            }
+            
+            // Chance to burrow when fleeing (escape mechanism)
+            if (burrowTimer <= 0 && Math.random() < 0.1) {
+                gopher.setData('state', 'burrowing');
+                gopher.setData('burrowTimer', 500); // Faster burrow when fleeing
+            }
+
+            // Remove when off screen
+            if (gopher.x < -50 || gopher.x > 850 || gopher.y < -50 || gopher.y > 650) {
+                this.gopherEscape(gopher);
+            }
+        }
+        
+        // Animate gopher when moving (only when on surface)
+        if (isMoving && state !== 'underground') {
+            const animTimer = gopher.getData('animationTimer') + 16; // Assume ~60fps
+            gopher.setData('animationTimer', animTimer);
+            const bobOffset = Math.sin(animTimer * 0.01) * 1.5; // Slightly different movement pattern
+            gopher.setDisplayOrigin(gopher.width / 2, gopher.height / 2 - bobOffset);
+        } else if (state !== 'burrowing' && state !== 'surfacing') {
+            // Reset animation when not moving (but not during burrow/surface transitions)
+            gopher.setData('animationTimer', 0);
+            gopher.setDisplayOrigin(gopher.width / 2, gopher.height / 2);
+        }
+    }
+
+    gopherGrabVegetable(gopher, vegetable) {
+        // Can't grab vegetables while underground
+        if (gopher.getData('state') === 'underground') {
+            return;
+        }
+        
+        // CRITICAL: Multiple layers of protection against round transition vegetable grabbing
+        if (gopher.getData('state') === 'seeking' && 
+            vegetable.getData('inPlay') && 
+            !this.vegetablesDropped && 
+            this.roundActive && 
+            !this.roundEnding &&
+            !this.isVegetableBeingCarried(vegetable)) {
+            
+            // Check actual distance to ensure gopher is close enough
+            const distance = Phaser.Math.Distance.Between(gopher.x, gopher.y, vegetable.x, vegetable.y);
+            if (distance <= 25) {
+                gopher.setData('state', 'carrying');
+                gopher.setData('targetVegetable', vegetable);
+                
+                // Update vegetable state
+                vegetable.setData('inPlay', false);
+                
+                // Update vegetable count after status change
+                this.updateVegetableCount();
+                this.updateUI();
+                
+                // Play vegetable grab sound
+                this.playVegetableGrabSound();
+            }
+        }
+    }
+
+    hitGopher(water, gopher) {
+        water.destroy();
+        
+        // Gophers are immune to water spray when underground
+        if (gopher.getData('state') === 'underground') {
+            return;
+        }
+        
+        // During round transitions, only repel animals but don't modify vegetables
+        if (!this.roundActive) {
+            gopher.setData('state', 'fleeing');
+            this.playSquirrelHitSound();
+            return;
+        }
+        
+        // Drop vegetable if carrying one (only during active rounds)
+        const vegetable = gopher.getData('targetVegetable');
+        if (vegetable && vegetable.active) {
+            console.log(`SPRAY DROP: Gopher dropped vegetable at (${vegetable.x}, ${vegetable.y}) - resetting to full in-play state`);
+            
+            // CRITICAL: Ensure vegetable is fully restored to in-play state
+            vegetable.setData('inPlay', true);
+            vegetable.setVisible(true);
+            vegetable.setActive(true);
+            
+            // Reset vegetable appearance to normal when dropped
+            vegetable.setScale(1.0);
+            vegetable.setTint(0xffffff);
+            vegetable.setAlpha(1.0);
+            vegetable.setDepth(1);
+            
+            // CRITICAL: Ensure physics body is properly enabled
+            if (vegetable.body) {
+                vegetable.body.setEnable(true);
+            }
+            
+            console.log(`SPRAY DROP: Gopher vegetable state after reset - inPlay: ${vegetable.getData('inPlay')}, visible: ${vegetable.visible}, active: ${vegetable.active}`);
+        }
+        
+        // Update vegetable count after vegetable has been restored
+        this.updateVegetableCount();
+        
+        gopher.setData('state', 'fleeing');
+        gopher.setData('targetVegetable', null);
+        
+        // Reset appearance when hit
+        gopher.setAlpha(1.0);
+        gopher.setDepth(1);
+
+        // Play gopher hit sound effect
+        this.playSquirrelHitSound();
+    }
+
+    gopherEscape(gopher) {
+        const vegetable = gopher.getData('targetVegetable');
+        if (vegetable && vegetable.active) {
+            vegetable.destroy();
+            this.updateUI();
+            
+            // Play sad sound when gopher escapes with vegetable
+            this.playSquirrelEscapeSound();
+        }
+        
+        // Clean up any dirt mounds created by this gopher
+        const gipherMounds = gopher.getData('dirtMounds') || [];
+        gipherMounds.forEach(mound => {
+            if (mound && mound.active) {
+                mound.destroy();
+            }
+        });
+        
+        gopher.destroy();
+    }
+
+    spawnRabbit() {
+        const side = Math.floor(Math.random() * 4);
+        let x, y;
+        
+        switch (side) {
+            case 0: // top
+                x = Math.random() * 800;
+                y = -32;
+                break;
+            case 1: // right
+                x = 832;
+                y = Math.random() * 600;
+                break;
+            case 2: // bottom
+                x = Math.random() * 800;
+                y = 632;
+                break;
+            case 3: // left
+                x = -32;
+                y = Math.random() * 600;
+                break;
+        }
+
+        const rabbit = this.physics.add.sprite(x, y, 'rabbit');
+        
+        // Set smaller collision body for more precise collision detection
+        rabbit.body.setSize(20, 20); // Reduce from default sprite size to more accurate collision
+        rabbit.body.setOffset(6, 6); // Center the collision body on the sprite
+        
+        rabbit.setData('targetVegetable', null);
+        rabbit.setData('state', 'seeking'); // seeking, hopping, carrying, fleeing
+        rabbit.setData('hopTimer', 0); // Timer for hop phases
+        rabbit.setData('hopPhase', 'preparing'); // preparing, jumping, landing, resting
+        rabbit.setData('hopDirection', { x: 0, y: 0 }); // Current hop direction
+        rabbit.setData('animationTimer', 0); // For animation
+        rabbit.setData('hopPattern', Math.floor(Math.random() * 3)); // Different hopping patterns (0, 1, 2)
+        rabbit.setData('restTimer', 200 + Math.random() * 400); // Initial rest time
+        rabbit.setData('isMoving', false); // Track if currently in motion
+        rabbit.setDepth(1); // Set depth same as other animals
+        this.rabbits.add(rabbit);
+    }
+
+    updateRabbit(rabbit) {
+        const state = rabbit.getData('state');
+        const hopPhase = rabbit.getData('hopPhase');
+        const hopTimer = rabbit.getData('hopTimer');
+        const restTimer = rabbit.getData('restTimer');
+        
+        // Update timers
+        if (hopTimer > 0) {
+            rabbit.setData('hopTimer', hopTimer - 16);
+        }
+        if (restTimer > 0) {
+            rabbit.setData('restTimer', restTimer - 16);
+        }
+        
+        if (state === 'seeking') {
+            // Find closest vegetable
+            let closestVegetable = null;
+            let minDistance = Infinity;
+            
+            this.vegetables.children.entries.forEach(vegetable => {
+                if (vegetable.getData('inPlay')) {
+                    const distance = Phaser.Math.Distance.Between(rabbit.x, rabbit.y, vegetable.x, vegetable.y);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestVegetable = vegetable;
+                    }
+                }
+            });
+            
+            if (closestVegetable) {
+                rabbit.setData('targetVegetable', closestVegetable);
+                this.executeRabbitHopSequence(rabbit, closestVegetable, this.rabbitHopSpeed);
+            } else {
+                // No target, just rest
+                this.executeRabbitResting(rabbit);
+            }
+        } else if (state === 'carrying') {
+            // Move towards exit with vegetable
+            const vegetable = rabbit.getData('targetVegetable');
+            if (vegetable && vegetable.active) {
+                // Update vegetable position to follow rabbit
+                vegetable.x = rabbit.x;
+                vegetable.y = rabbit.y - 5; // Slightly above rabbit
+                vegetable.setDepth(3); // Above other vegetables
+                vegetable.setScale(0.8); // Smaller when carried
+                vegetable.setTint(0xffdd88); // Slightly yellow tint
+                
+                // Calculate closest exit for hopping
+                const exits = [
+                    { x: -50, y: rabbit.y }, // Left
+                    { x: 850, y: rabbit.y }, // Right
+                    { x: rabbit.x, y: -50 }, // Top
+                    { x: rabbit.x, y: 650 }  // Bottom
+                ];
+                
+                let closestExit = exits[0];
+                let minDistance = Infinity;
+                
+                exits.forEach(exit => {
+                    const distance = Phaser.Math.Distance.Between(rabbit.x, rabbit.y, exit.x, exit.y);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestExit = exit;
+                    }
+                });
+                
+                this.executeRabbitHopSequence(rabbit, closestExit, this.rabbitCarrySpeed);
+                
+                // Check if rabbit reached edge with vegetable
+                if (rabbit.x < -16 || rabbit.x > 816 || rabbit.y < -16 || rabbit.y > 616) {
+                    this.rabbitEscape(rabbit);
+                    return;
+                }
+            } else {
+                rabbit.setData('state', 'seeking');
+                rabbit.setData('targetVegetable', null);
+            }
+        } else if (state === 'fleeing') {
+            // Fast, panicked hopping away from gardener
+            const fleeTarget = {
+                x: rabbit.x - (this.gardener.x - rabbit.x),
+                y: rabbit.y - (this.gardener.y - rabbit.y)
+            };
+            
+            this.executeRabbitHopSequence(rabbit, fleeTarget, this.rabbitFleeSpeed, true);
+            
+            // Check if rabbit escaped
+            if (rabbit.x < -32 || rabbit.x > 832 || rabbit.y < -32 || rabbit.y > 632) {
+                rabbit.destroy();
+                return;
+            }
+        }
+        
+        // Handle hop animation phases
+        this.updateRabbitHopAnimation(rabbit);
+    }
+
+    executeRabbitHopSequence(rabbit, target, speed, isFleeing = false) {
+        const hopPhase = rabbit.getData('hopPhase');
+        const hopTimer = rabbit.getData('hopTimer');
+        const restTimer = rabbit.getData('restTimer');
+        
+        switch (hopPhase) {
+            case 'resting':
+                // Rabbit is resting between hops
+                rabbit.body.setVelocity(0, 0);
+                rabbit.setData('isMoving', false);
+                
+                if (restTimer <= 0) {
+                    // Time to prepare for next hop
+                    rabbit.setData('hopPhase', 'preparing');
+                    rabbit.setData('hopTimer', 100); // Brief preparation time
+                }
+                break;
+                
+            case 'preparing':
+                // Brief crouch before hop
+                rabbit.body.setVelocity(0, 0);
+                rabbit.setData('isMoving', false);
+                
+                if (hopTimer <= 0) {
+                    // Calculate hop direction and start hopping
+                    this.calculateRabbitHopDirection(rabbit, target, speed, isFleeing);
+                    rabbit.setData('hopPhase', 'jumping');
+                    
+                    // Much more variable hop duration for erratic timing
+                    let hopDuration;
+                    if (isFleeing) {
+                        hopDuration = 120 + Math.random() * 180; // Fast, erratic hops when fleeing
+                    } else {
+                        hopDuration = 150 + Math.random() * 300; // Very variable normal hop duration
+                    }
+                    rabbit.setData('hopTimer', hopDuration);
+                    rabbit.setData('isMoving', true);
+                    
+                    // Play hop sound occasionally
+                    if (Math.random() < 0.3) {
+                        this.playRabbitHopSound();
+                    }
+                }
+                break;
+                
+            case 'jumping':
+                // Rabbit is in mid-hop
+                const hopDirection = rabbit.getData('hopDirection');
+                rabbit.body.setVelocity(hopDirection.x, hopDirection.y);
+                rabbit.setData('isMoving', true);
+                
+                if (hopTimer <= 0) {
+                    // Land and start resting
+                    rabbit.body.setVelocity(0, 0);
+                    rabbit.setData('hopPhase', 'resting');
+                    rabbit.setData('isMoving', false);
+                    
+                    // More predictable rest times with moderate variation
+                    let restTime;
+                    if (isFleeing) {
+                        restTime = 30 + Math.random() * 80; // Shorter range for fleeing
+                    } else if (rabbit.getData('state') === 'carrying') {
+                        restTime = 80 + Math.random() * 160; // Moderate range when carrying
+                        // Occasional quick hops but less frequent
+                        if (Math.random() < 0.1) {
+                            restTime = 30 + Math.random() * 40; // Less frequent nervous behavior
+                        }
+                    } else {
+                        restTime = 150 + Math.random() * 300; // More moderate range when seeking
+                        // Reduce extreme behaviors
+                        if (Math.random() < 0.05) {
+                            restTime = 400 + Math.random() * 200; // Less frequent long pauses
+                        }
+                    }
+                    
+                    rabbit.setData('restTimer', restTime);
+                }
+                break;
+        }
+    }
+
+    executeRabbitResting(rabbit) {
+        // When no target, just rest
+        const hopPhase = rabbit.getData('hopPhase');
+        const restTimer = rabbit.getData('restTimer');
+        
+        rabbit.body.setVelocity(0, 0);
+        rabbit.setData('isMoving', false);
+        
+        if (hopPhase !== 'resting') {
+            rabbit.setData('hopPhase', 'resting');
+            rabbit.setData('restTimer', 500 + Math.random() * 1000); // Long idle rest
+        }
+        
+        if (restTimer <= 0) {
+            // Occasionally do a random hop even without target
+            if (Math.random() < 0.3) {
+                const randomTarget = {
+                    x: rabbit.x + (Math.random() - 0.5) * 200,
+                    y: rabbit.y + (Math.random() - 0.5) * 200
+                };
+                rabbit.setData('hopPhase', 'preparing');
+                rabbit.setData('hopTimer', 100);
+            } else {
+                rabbit.setData('restTimer', 300 + Math.random() * 500);
+            }
+        }
+    }
+
+    calculateRabbitHopDirection(rabbit, target, speed, isFleeing) {
+        // Calculate base direction towards target
+        const dx = target.x - rabbit.x;
+        const dy = target.y - rabbit.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance === 0) {
+            // Random direction if no clear target
+            const angle = Math.random() * Math.PI * 2;
+            rabbit.setData('hopDirection', {
+                x: Math.cos(angle) * speed,
+                y: Math.sin(angle) * speed
+            });
+            return;
+        }
+        
+        // Normalize direction
+        const normalX = dx / distance;
+        const normalY = dy / distance;
+        
+        // Get rabbit's hopping pattern
+        const hopPattern = rabbit.getData('hopPattern');
+        let hopX, hopY;
+        
+        if (isFleeing) {
+            // Panicked movement when fleeing - less extreme than before
+            const panicAngle = (Math.random() - 0.5) * 1.0; // Reduced from 2.0
+            const cosAngle = Math.cos(panicAngle);
+            const sinAngle = Math.sin(panicAngle);
+            hopX = (normalX * cosAngle - normalY * sinAngle) * speed;
+            hopY = (normalX * sinAngle + normalY * cosAngle) * speed;
+        } else {
+            // Check if we're seeking a vegetable and close enough for precise targeting
+            const state = rabbit.getData('state');
+            const targetVegetable = rabbit.getData('targetVegetable');
+            const isSeekingVegetable = state === 'seeking' && targetVegetable && targetVegetable.active;
+            const grabbingDistance = 80; // Distance threshold for precise targeting
+            
+            if (isSeekingVegetable && distance <= grabbingDistance) {
+                // Use precise direct hop when close to target vegetable
+                const adjustedSpeed = Math.min(speed, distance * 1.2); // Reduce speed to avoid overshooting
+                hopX = normalX * adjustedSpeed;
+                hopY = normalY * adjustedSpeed;
+                
+                // Add minimal variation to maintain rabbit character
+                const tinyVariation = 0.05;
+                hopX += (Math.random() - 0.5) * speed * tinyVariation;
+                hopY += (Math.random() - 0.5) * speed * tinyVariation;
+            } else {
+                // Use erratic patterns when not close to vegetable target
+                const timeNow = Date.now();
+                
+                // Reduce pattern change frequency
+                if (Math.random() < 0.08) { // Reduced from 15% to 8%
+                    rabbit.setData('hopPattern', Math.floor(Math.random() * 3)); // Back to 3 patterns instead of 6
+                }
+                
+                // Apply more controlled hopping patterns
+                switch (hopPattern) {
+                    case 0: // Moderate zigzag pattern
+                        const zigzagAngle = Math.sin(timeNow * 0.008) * 0.7; // Reduced intensity
+                        hopX = normalX * speed + Math.cos(zigzagAngle) * speed * 0.4; // Reduced from 0.8
+                        hopY = normalY * speed + Math.sin(zigzagAngle) * speed * 0.4;
+                        break;
+                    case 1: // Gentle circular pattern
+                        const circleAngle = timeNow * 0.006; // More consistent speed
+                        const circleRadius = 0.3 + Math.random() * 0.3; // Smaller, more controlled radius
+                        hopX = normalX * speed + Math.cos(circleAngle) * speed * circleRadius;
+                        hopY = normalY * speed + Math.sin(circleAngle) * speed * circleRadius;
+                        break;
+                    case 2: // Controlled spiral approach
+                        const spiralTime = timeNow * 0.005;
+                        const spiralAngle = Math.sin(spiralTime) * 0.4; // Reduced from 0.7
+                        const cosSpiral = Math.cos(spiralAngle);
+                        const sinSpiral = Math.sin(spiralAngle);
+                        hopX = (normalX * cosSpiral - normalY * sinSpiral) * speed;
+                        hopY = (normalX * sinSpiral + normalY * cosSpiral) * speed;
+                        break;
+                }
+                
+                // Add small random variation instead of large chaos
+                const smallVariation = 0.1; // Much smaller than before
+                hopX += (Math.random() - 0.5) * speed * smallVariation;
+                hopY += (Math.random() - 0.5) * speed * smallVariation;
+            }
+        }
+        
+        rabbit.setData('hopDirection', { x: hopX, y: hopY });
+    }
+
+    updateRabbitHopAnimation(rabbit) {
+        const hopPhase = rabbit.getData('hopPhase');
+        const isMoving = rabbit.getData('isMoving');
+        const animTimer = rabbit.getData('animationTimer') + 16;
+        rabbit.setData('animationTimer', animTimer);
+        
+        switch (hopPhase) {
+            case 'preparing':
+                // Crouch down slightly before hop
+                rabbit.setScale(1.1, 0.9);
+                rabbit.setRotation(0);
+                break;
+                
+            case 'jumping':
+                // Stretched out during hop
+                const jumpPhase = Math.sin(animTimer * 0.02);
+                rabbit.setScale(0.9 + jumpPhase * 0.2, 1.1 + jumpPhase * 0.3);
+                rabbit.setRotation(Math.sin(animTimer * 0.015) * 0.15);
+                break;
+                
+            case 'resting':
+                // Normal size when resting, occasional twitch
+                const twitch = Math.sin(animTimer * 0.003) * 0.02;
+                rabbit.setScale(1.0 + twitch, 1.0 - twitch * 0.5);
+                rabbit.setRotation(Math.sin(animTimer * 0.002) * 0.05);
+                break;
+                
+            default:
+                rabbit.setScale(1.0, 1.0);
+                rabbit.setRotation(0);
+                break;
+        }
+    }
+
+    calculateRabbitHop(rabbit, target) {
+        // Get rabbit's hopping pattern
+        const hopPattern = rabbit.getData('hopPattern');
+        
+        // Calculate base direction towards target
+        const dx = target.x - rabbit.x;
+        const dy = target.y - rabbit.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance === 0) return;
+        
+        // Normalize direction
+        const normalX = dx / distance;
+        const normalY = dy / distance;
+        
+        // Apply different erratic hopping patterns
+        let hopX, hopY;
+        
+        switch (hopPattern) {
+            case 0: // Zigzag pattern
+                const zigzagAngle = Math.sin(Date.now() * 0.01) * 0.8; // Zigzag left/right
+                hopX = normalX * this.rabbitHopSpeed + Math.cos(zigzagAngle) * this.rabbitHopSpeed * 0.6;
+                hopY = normalY * this.rabbitHopSpeed + Math.sin(zigzagAngle) * this.rabbitHopSpeed * 0.6;
+                break;
+            case 1: // Circular hops
+                const circleAngle = Date.now() * 0.005;
+                const circleRadius = 0.5;
+                hopX = normalX * this.rabbitHopSpeed + Math.cos(circleAngle) * this.rabbitHopSpeed * circleRadius;
+                hopY = normalY * this.rabbitHopSpeed + Math.sin(circleAngle) * this.rabbitHopSpeed * circleRadius;
+                break;
+            case 2: // Random direction changes
+                const randomAngle = (Math.random() - 0.5) * 1.2; // Random angle deviation
+                const cosAngle = Math.cos(randomAngle);
+                const sinAngle = Math.sin(randomAngle);
+                hopX = (normalX * cosAngle - normalY * sinAngle) * this.rabbitHopSpeed;
+                hopY = (normalX * sinAngle + normalY * cosAngle) * this.rabbitHopSpeed;
+                break;
+        }
+        
+        rabbit.setData('hopDirection', { x: hopX, y: hopY });
+    }
+
+    calculateRabbitExitHop(rabbit) {
+        // Find closest exit point
+        const exits = [
+            { x: -50, y: rabbit.y }, // Left
+            { x: 850, y: rabbit.y }, // Right
+            { x: rabbit.x, y: -50 }, // Top
+            { x: rabbit.x, y: 650 }  // Bottom
+        ];
+        
+        let closestExit = exits[0];
+        let minDistance = Infinity;
+        
+        exits.forEach(exit => {
+            const distance = Phaser.Math.Distance.Between(rabbit.x, rabbit.y, exit.x, exit.y);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestExit = exit;
+            }
+        });
+        
+        // Calculate direction towards exit with some erratic movement
+        const dx = closestExit.x - rabbit.x;
+        const dy = closestExit.y - rabbit.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance === 0) return;
+        
+        const normalX = dx / distance;
+        const normalY = dy / distance;
+        
+        // Add some erratic movement even when carrying
+        const randomAngle = (Math.random() - 0.5) * 0.4;
+        const cosAngle = Math.cos(randomAngle);
+        const sinAngle = Math.sin(randomAngle);
+        
+        const hopX = (normalX * cosAngle - normalY * sinAngle) * this.rabbitCarrySpeed;
+        const hopY = (normalX * sinAngle + normalY * cosAngle) * this.rabbitCarrySpeed;
+        
+        rabbit.setData('hopDirection', { x: hopX, y: hopY });
+    }
+
+    calculateRabbitFleeHop(rabbit) {
+        // Flee away from gardener
+        const dx = rabbit.x - this.gardener.x;
+        const dy = rabbit.y - this.gardener.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance === 0) {
+            // If too close, pick random direction
+            const angle = Math.random() * Math.PI * 2;
+            rabbit.setData('hopDirection', {
+                x: Math.cos(angle) * this.rabbitFleeSpeed,
+                y: Math.sin(angle) * this.rabbitFleeSpeed
+            });
+            return;
+        }
+        
+        const normalX = dx / distance;
+        const normalY = dy / distance;
+        
+        // Add panic movement - more erratic when fleeing
+        const panicAngle = (Math.random() - 0.5) * 0.8;
+        const cosAngle = Math.cos(panicAngle);
+        const sinAngle = Math.sin(panicAngle);
+        
+        const hopX = (normalX * cosAngle - normalY * sinAngle) * this.rabbitFleeSpeed;
+        const hopY = (normalX * sinAngle + normalY * cosAngle) * this.rabbitFleeSpeed;
+        
+        rabbit.setData('hopDirection', { x: hopX, y: hopY });
+    }
+
+    rabbitGrabVegetable(rabbit, vegetable) {
+        // Don't grab vegetables during round transitions
+        if (!this.roundActive) return;
+
+        if (vegetable.getData('inPlay') && rabbit.getData('state') === 'seeking') {
+            console.log(`RABBIT GRAB: Rabbit grabbed vegetable at (${vegetable.x}, ${vegetable.y})`);
+            
+            rabbit.setData('targetVegetable', vegetable);
+            rabbit.setData('state', 'carrying');
+            
+            // Mark vegetable as taken but keep it visible and active for updating position
+            vegetable.setData('inPlay', false);
+            
+            // Update vegetable count
+            this.updateVegetableCount();
+            
+            // Play vegetable grab sound
+            this.playVegetableGrabSound();
+        }
+    }
+
+    hitRabbit(water, rabbit) {
+        water.destroy();
+        
+        // During round transitions, only repel animals but don't modify vegetables
+        if (!this.roundActive) {
+            rabbit.setData('state', 'fleeing');
+            this.playRabbitHopSound();
+            return;
+        }
+        
+        // Drop vegetable if carrying one (only during active rounds)
+        const vegetable = rabbit.getData('targetVegetable');
+        if (vegetable && vegetable.active) {
+            console.log(`SPRAY DROP: Rabbit dropped vegetable at (${vegetable.x}, ${vegetable.y}) - resetting to full in-play state`);
+            
+            // CRITICAL: Ensure vegetable is fully restored to in-play state
+            vegetable.setData('inPlay', true);
+            vegetable.setVisible(true);
+            vegetable.setActive(true);
+            
+            // Reset vegetable appearance to normal when dropped
+            vegetable.setScale(1.0);
+            vegetable.setTint(0xffffff);
+            vegetable.setAlpha(1.0);
+            vegetable.setDepth(1);
+            
+            // CRITICAL: Ensure physics body is properly enabled
+            if (vegetable.body) {
+                vegetable.body.setEnable(true);
+            }
+            
+            console.log(`SPRAY DROP: Rabbit vegetable state after reset - inPlay: ${vegetable.getData('inPlay')}, visible: ${vegetable.visible}, active: ${vegetable.active}`);
+        }
+        
+        // Update vegetable count after vegetable has been restored
+        this.updateVegetableCount();
+        
+        rabbit.setData('state', 'fleeing');
+        rabbit.setData('targetVegetable', null);
+        
+        // Reset appearance when hit
+        rabbit.setAlpha(1.0);
+        rabbit.setDepth(1);
+        rabbit.setScale(1.0, 1.0);
+        rabbit.setRotation(0);
+
+        // Play rabbit hit sound effect
+        this.playRabbitHopSound();
+    }
+
+    rabbitEscape(rabbit) {
+        const vegetable = rabbit.getData('targetVegetable');
+        if (vegetable && vegetable.active) {
+            vegetable.destroy();
+            this.updateUI();
+            
+            // Play sad sound when rabbit escapes with vegetable
+            this.playSquirrelEscapeSound();
+        }
+        
+        rabbit.destroy();
+    }
+
     async confirmAndQuitGame() {
         // Only show confirmation if a game is actually running
         if (this.gameStarted) {
@@ -5074,6 +6873,9 @@ class GameScene extends Phaser.Scene {
         }
         if (this.raccoonVegetableCollision && this.raccoonVegetableCollision.active) {
             this.raccoonVegetableCollision.active = false;
+        }
+        if (this.rabbitVegetableCollision && this.rabbitVegetableCollision.active) {
+            this.rabbitVegetableCollision.active = false;
         }
         
         this.roundEnding = true;

@@ -568,6 +568,329 @@ canvas {
   font-size: 10px; /* Slightly increased font size */
 }
 
+/* Secret Admin Trigger */
+#admin-trigger {
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 9999; /* Much higher z-index to ensure it's above canvas */
+  /* Make it completely invisible but still interactive */
+  opacity: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: auto; /* Ensure it can receive events */
+  touch-action: manipulation; /* Proper touch handling */
+  transition: opacity 0.3s ease, background 0.3s ease;
+}
+
+/* Debug mode - add class 'debug' to body to see the admin trigger */
+body.debug #admin-trigger {
+  opacity: 0.8 !important;
+  background: rgba(255, 0, 0, 0.8) !important;
+  border: 3px solid #ff0000 !important;
+  border-radius: 50% !important;
+  z-index: 99999 !important;
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.8) !important;
+  animation: pulse-debug 1s infinite alternate !important;
+}
+
+body.debug #admin-trigger:hover {
+  opacity: 1 !important;
+  background: rgba(255, 0, 0, 1) !important;
+  transform: scale(1.1) !important;
+}
+
+@keyframes pulse-debug {
+  from { 
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+  }
+  to { 
+    box-shadow: 0 0 30px rgba(255, 0, 0, 1);
+  }
+}
+
+/* Visual feedback when pressed (subtle but noticeable) */
+#admin-trigger:active {
+  opacity: 0.2;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  transform: scale(0.95);
+}
+
+/* Desktop-specific hover hint (subtle but visible) */
+@media (hover: hover) and (pointer: fine) {
+  #admin-trigger:hover {
+    opacity: 0.15;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    transition: opacity 0.2s ease, background 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Admin Panel Overlay */
+.admin-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 10000;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(5px);
+}
+
+.admin-overlay.active {
+  display: flex;
+}
+
+.admin-content {
+  background: linear-gradient(135deg, rgba(74, 103, 65, 0.95), rgba(45, 74, 43, 0.9));
+  border: 3px solid rgba(255, 215, 0, 0.6);
+  border-radius: 15px;
+  padding: 30px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+
+.admin-content h3 {
+  color: white;
+  margin: 0 0 20px 0;
+  font-size: 20px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.admin-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+#admin-clear-scores-btn,
+#admin-close-btn {
+  padding: 12px 20px;
+  border: 2px solid rgba(255, 215, 0, 0.4);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+#admin-clear-scores-btn {
+  background: linear-gradient(135deg, #DC143C, #B22222);
+  color: white;
+}
+
+#admin-clear-scores-btn:hover {
+  background: linear-gradient(135deg, #FF1744, #DC143C);
+  border-color: rgba(255, 215, 0, 0.6);
+  box-shadow: 0 4px 12px rgba(220, 20, 60, 0.4);
+  transform: translateY(-2px);
+}
+
+#admin-close-btn {
+  background: linear-gradient(135deg, #4A6741, #2D4A2B);
+  color: white;
+}
+
+#admin-close-btn:hover {
+  background: linear-gradient(135deg, #5A7A51, #3D5A3B);
+  border-color: rgba(255, 215, 0, 0.6);
+  box-shadow: 0 4px 12px rgba(74, 103, 65, 0.4);
+  transform: translateY(-2px);
+}
+
+#admin-clear-scores-btn:active,
+#admin-close-btn:active {
+  transform: translateY(0px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Animal Control Styles */
+.admin-section {
+  margin: 20px 0;
+  text-align: left;
+}
+
+.admin-section h4 {
+  color: #FFD700;
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  text-align: center;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.animal-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  margin: 8px 0;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.animal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.animal-icon {
+  font-size: 18px;
+}
+
+.animal-name {
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+/* Toggle Switch Styles */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+  margin: 0 10px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.3s;
+  border-radius: 24px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #4CAF50;
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+/* Round Selector Styles */
+.round-selector {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.round-selector label {
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.round-selector select {
+  background: rgba(74, 103, 65, 0.8);
+  color: white;
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.round-selector select:focus {
+  outline: none;
+  border-color: rgba(255, 215, 0, 0.8);
+  box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+}
+
+/* Game Settings Styles */
+.setting-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  margin: 8px 0;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.setting-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.setting-icon {
+  font-size: 18px;
+}
+
+.setting-name {
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.duration-selector {
+  display: flex;
+  align-items: center;
+}
+
+.duration-selector select {
+  background: rgba(74, 103, 65, 0.8);
+  color: white;
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  min-width: 120px;
+}
+
+.duration-selector select:focus {
+  outline: none;
+  border-color: rgba(255, 215, 0, 0.8);
+  box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+}
+
 #start-screen {
   position: fixed;
   /* Position relative to viewport to cover entire game area */
@@ -1067,7 +1390,38 @@ body:not(.game-started):not(.game-over) #start-screen {
   .top-score-item {
     padding: 3px 6px; /* Comfortable mobile padding */
   }
+
+  /* Mobile high scores controls */
+  #clear-high-scores-btn {
+    padding: 5px 10px;
+    font-size: 9px;
+    margin-top: 6px;
+  }
+
+  /* Mobile admin panel styling */
+  .admin-content {
+    padding: 20px;
+    max-width: 320px;
+  }
   
+  .admin-content h3 {
+    font-size: 18px;
+    margin-bottom: 15px;
+  }
+  
+  #admin-clear-scores-btn,
+  #admin-close-btn {
+    padding: 10px 16px;
+    font-size: 12px;
+  }
+  
+  #admin-trigger {
+    width: 50px;
+    height: 50px;
+    bottom: 20px;
+    left: 20px;
+  }
+
   #game-stats {
     padding: 3px 5px;
   }
@@ -1685,6 +2039,13 @@ body:not(.game-started):not(.game-over) #start-screen {
   .top-score-item {
     padding: 6px 10px; /* Increased padding for desktop */
   }
+
+  /* Desktop high scores controls */
+  #clear-high-scores-btn {
+    padding: 8px 14px;
+    font-size: 11px;
+    margin-top: 10px;
+  }
 }
 
 /* Blue styling for left/right arrows when spraying */
@@ -1829,4 +2190,27 @@ body:not(.game-started):not(.game-over) #start-screen {
   background: radial-gradient(circle at 30% 30%, rgba(135, 206, 250, 1), rgba(65, 105, 225, 1)) !important;
   border-color: #87CEEB !important;
   box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.4), 0 0 20px rgba(135, 206, 250, 0.8) !important;
+}
+
+/* Desktop admin panel styling */
+@media (min-width: 1024px) {
+  .admin-content {
+    padding: 40px;
+    max-width: 450px;
+  }
+  
+  .admin-content h3 {
+    font-size: 24px;
+    margin-bottom: 25px;
+  }
+  
+  #admin-clear-scores-btn,
+  #admin-close-btn {
+    padding: 15px 25px;
+    font-size: 16px;
+  }
+  
+  .admin-buttons {
+    gap: 20px;
+  }
 }

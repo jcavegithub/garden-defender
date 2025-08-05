@@ -278,6 +278,131 @@
         </div>
       </div>
     </div>
+
+    <!-- Secret Admin Trigger (invisible button in bottom-left) -->
+    <div id="admin-trigger" title="Hold for 3 seconds to access admin panel"></div>
+
+    <!-- Admin Panel (hidden by default) -->
+    <div id="admin-panel" class="admin-overlay">
+      <div class="admin-content">
+        <h3>🔧 Administrator Panel</h3>
+        
+        <!-- Animal Control Section -->
+        <div class="admin-section">
+          <h4>🐾 Animal Spawning Controls</h4>
+          
+          <div class="animal-control">
+            <div class="animal-header">
+              <span class="animal-icon">🐿️</span>
+              <span class="animal-name">Squirrels</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="squirrel-enabled" checked>
+              <span class="slider"></span>
+            </label>
+            <div class="round-selector">
+              <label>Start Round:</label>
+              <select id="squirrel-start-round">
+                <option value="1" selected>Round 1</option>
+                <option value="2">Round 2</option>
+                <option value="3">Round 3</option>
+                <option value="4">Round 4</option>
+                <option value="5">Round 5</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="animal-control">
+            <div class="animal-header">
+              <span class="animal-icon">🦝</span>
+              <span class="animal-name">Raccoons</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="raccoon-enabled" checked>
+              <span class="slider"></span>
+            </label>
+            <div class="round-selector">
+              <label>Start Round:</label>
+              <select id="raccoon-start-round">
+                <option value="1">Round 1</option>
+                <option value="2" selected>Round 2</option>
+                <option value="3">Round 3</option>
+                <option value="4">Round 4</option>
+                <option value="5">Round 5</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="animal-control">
+            <div class="animal-header">
+              <span class="animal-icon">🦫</span>
+              <span class="animal-name">Gophers</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="gopher-enabled" checked>
+              <span class="slider"></span>
+            </label>
+            <div class="round-selector">
+              <label>Start Round:</label>
+              <select id="gopher-start-round">
+                <option value="1">Round 1</option>
+                <option value="2">Round 2</option>
+                <option value="3" selected>Round 3</option>
+                <option value="4">Round 4</option>
+                <option value="5">Round 5</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="animal-control">
+            <div class="animal-header">
+              <span class="animal-icon">🐰</span>
+              <span class="animal-name">Rabbits</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="rabbit-enabled" checked>
+              <span class="slider"></span>
+            </label>
+            <div class="round-selector">
+              <label>Start Round:</label>
+              <select id="rabbit-start-round">
+                <option value="1">Round 1</option>
+                <option value="2" selected>Round 2</option>
+                <option value="3">Round 3</option>
+                <option value="4">Round 4</option>
+                <option value="5">Round 5</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Game Settings Section -->
+        <div class="admin-section">
+          <h4>⏱️ Game Settings</h4>
+          
+          <div class="setting-control">
+            <div class="setting-header">
+              <span class="setting-icon">⏰</span>
+              <span class="setting-name">Round Duration</span>
+            </div>
+            <div class="duration-selector">
+              <select id="round-duration">
+                <option value="10">10 seconds</option>
+                <option value="20">20 seconds</option>
+                <option value="30">30 seconds</option>
+                <option value="60" selected>60 seconds</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <div class="admin-buttons">
+          <button id="admin-restore-defaults-btn">🔄 Restore Defaults</button>
+          <button id="admin-clear-scores-btn">🗑️ Clear All High Scores</button>
+          <button id="admin-close-btn">❌ Close</button>
+        </div>
+      </div>
+    </div>
   </div>
   <script type="module" src="/src/main.js"></script>
 </body>

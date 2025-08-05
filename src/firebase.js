@@ -151,6 +151,39 @@ class FirebaseManager {
     }
   }
 
+  async clearAllHighScores() {
+    try {
+      await this.waitForInitialization();
+      if (!this.isInitialized) {
+        console.log('Firebase not initialized, cannot clear high scores');
+        return false;
+      }
+
+      console.log('Clearing all high scores...');
+      
+      // Get all high score documents
+      const scoresQuery = query(collection(db, 'highScores'));
+      const querySnapshot = await getDocs(scoresQuery);
+      
+      let deletedCount = 0;
+      const deletePromises = [];
+      
+      querySnapshot.forEach((docSnapshot) => {
+        deletePromises.push(deleteDoc(docSnapshot.ref));
+        deletedCount++;
+      });
+      
+      // Delete all documents in parallel
+      await Promise.all(deletePromises);
+      
+      console.log(`Successfully cleared ${deletedCount} high scores`);
+      return deletedCount;
+    } catch (error) {
+      console.error('Error clearing high scores:', error);
+      return false;
+    }
+  }
+
   // Game State Management
   async saveGameState(gameState, saveName = 'autosave') {
     try {
